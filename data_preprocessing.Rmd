@@ -1,0 +1,291 @@
+---
+title: "Cattle_survival"
+author: "Marietta_Dalamanga"
+date: "2024-07-01"
+output: html_document
+---
+
+## Data Preprocessing
+
+Load complete data file into a new object "data"
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(visdat)
+library(splitstackshape)
+library(tidyr)
+library(survminer)
+library(data.table)
+library(ggplot2)
+library(lubridate)
+
+```
+
+Load complete data file into a new object "raw_data"
+
+```{r}
+raw_data <- read.csv("data_complete.csv")
+```
+
+Dimensions of the dataset
+
+```{r}
+dimensions <- dim(raw_data)
+paste("rows in the dataset: ", dimensions[1])
+paste("columns in the dataset: ", dimensions[2])
+```
+
+Check top and bottom rows of the dataset
+
+```{r}
+print(head(raw_data))
+print(tail(raw_data))
+```
+An overview of the data and datatype of the variables
+
+```{r}
+glimpse(raw_data)
+```
+Unnamed column is a second index column that can be removed. 
+Most of the variable's data-type is character and we should change them to the appropriate datatype.
+We have 10 categorical variables , 2 date variables and 1 numerical
+
+```{r}
+data <- raw_data[, -1]
+head(data)
+```
+
+change data type of columns as follows:
+factor: Herd_Id, Abbatoir, Dvo_Code, Breed, Sex, Abattoir_._Died_on_Farm, Beef_or_Dairy, ConditionsbyAI
+Dates: Dob, Dod
+integer: Total_Conditions_per_Animal
+
+Before that we have to change all empty characters to Nan 
+```{r}
+data[data==""] <- NaN
+```
+
+Date of birth and Date of death variables to date data-type
+```{r}
+data[,c("Dob", "Dod")] = lapply(data[,c("Dob", "Dod")],
+                                function(x) as.Date(x, format="%m/%d/%Y"))
+```
+
+
+```{r}
+glimpse(data)
+```
+
+### Data preprocessing
+#### Assign the appropriate datatype to variables
+
+Change Data type to factor
+```{r}
+data[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Patch_Area", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy", "ConditionsbyAI")] = 
+  lapply(data[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Patch_Area", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy", "ConditionsbyAI")],
+                                function(x) as.factor(x))
+```
+
+Check how many levels for each factor
+```{r}
+sapply(data, nlevels)
+```
+#### Check for duplicated entries
+
+We use data.table library because it was more efficient with the large dataset
+```{r}
+data_table <- data.table(data)
+duplicated_rows_datatable <- duplicated(data_table)
+sum(duplicated_rows_datatable)
+```
+
+### Handling missing values
+
+find missing values pattern
+
+```{r}
+colSums(is.na(data))
+```
+
+
+```{r}
+sapply(data, function(x) mean(is.na(x)) * 100)
+```
+
+
+Delete Patch_area column because it has too many missing values (11,702) and we can get the information from Dvo_code variable
+```{r}
+clean_data <- data
+clean_data$Patch_Area <- NULL
+
+```
+
+Delete rows with missing values in Date of birth
+
+```{r}
+clean_data <- clean_data %>%
+  drop_na(Dob)
+
+```
+
+for the 21 cases of missing values in Dvo_Code variable we will try to use the information from herd Id or abbatoir id to find the area code
+
+```{r}
+missing_dvo <- clean_data[is.na(clean_data$Dvo_Code), ]
+print(paste("herd_id for missing Dvo_Code:", unique(missing_dvo$Herd_Id))) # two herd ids for the missing values of Dvo_code
+subset(clean_data, clean_data$Herd_Id=="85fd7d9610327e69a0b8e2767976c3261db39c87" | clean_data$Herd_Id=="7e7fec988d614e62f63db6d3547aa653c3fe48f3") # for this herd ids we do not have Dvo_code from other animals in the dataset
+
+list_abbatoir_id_for_dvo <- unique(missing_dvo$Abbatoir)
+print(paste("abbatoir_id for missing Dvo_Code:", unique(missing_dvo$Abbatoir)))
+subset(clean_data, clean_data$Abbatoir=="cdf0a11f70869c640bfe6c23935ff3da4acfb7b0" | clean_data$Abbatoir=="8a60fb1b9b40ed0fdc5d3c061e9388972f3bdce4")
+```
+
+Because it is only 21 entries we will exclude them from our analysis
+
+```{r}
+clean_data <- clean_data %>%
+  drop_na(Dvo_Code)
+```
+
+
+```{r}
+colSums(is.na(clean_data))
+```
+
+
+### Handle ConditionsbyAI variable
+
+Conditions by AI have 6736 different levels
+in each row there are multiple conditions
+We will create different column for each condition
+
+```{r}
+# Handle missing values and remove trailing asterisks in the "ConditionsbyAI" column
+clean_data$ConditionsbyAI <- as.character(clean_data$ConditionsbyAI)
+head(data)
+```
+
+```{r}
+# Assign the value No for no disease
+clean_data$ConditionsbyAI[(clean_data$ConditionsbyAI)=="NaN" | (clean_data$ConditionsbyAI)=="*" | (clean_data$ConditionsbyAI)=="**"] <- "No"
+
+```
+
+
+```{r}
+# replace the star at the end with empty character
+clean_data$ConditionsbyAI <- gsub("\\*$", "", clean_data$ConditionsbyAI)
+```
+
+
+```{r}
+# Split the "ConditionsbyAI" column into separate rows for each condition
+data_long <- clean_data %>%
+  separate_rows(ConditionsbyAI, sep = "\\*") 
+```
+
+
+Check for duplicated rows after the unpacking of Conditions to different rows
+```{r}
+data_table_long <- data.table(data_long)
+duplicated_rows_datatable_long <- duplicated(data_table_long)
+sum(duplicated_rows_datatable_long)
+```
+
+some entries have the same condition twice. This resulted to 391 duplicated entries 
+```{r}
+data_long[duplicated_rows_datatable_long, ]
+```
+
+```{r}
+data_table[data_table$Animal_Id== "ca31ff9491fcac3786e00ea5857607e8a15504a7", ConditionsbyAI]
+```
+
+```{r}
+
+data_table_long[data_table_long$Animal_Id=="ca31ff9491fcac3786e00ea5857607e8a15504a7", ConditionsbyAI]
+```
+
+Exclude duplicated entries from the dataset
+```{r}
+data_table_long <- unique(data_table_long)
+```
+
+
+There are 15 cases where the unpacked of conditions will generate empty strings. (between the two stars)
+```{r}
+data[data$Animal_Id=="951d86f6b9083d891158f6dbb0ed49efbcfa42bd", "ConditionsbyAI"]
+```
+
+Exclude entries with empty string at Conditions
+
+```{r}
+new_data_long <- subset(data_table_long, ConditionsbyAI!="")
+
+sum(new_data_long$ConditionsbyAI == "")
+```
+
+
+make variable ConditionsbyAI factor again
+```{r}
+new_data_long$ConditionsbyAI <-as.factor(new_data_long$ConditionsbyAI)
+```
+
+
+```{r}
+str(new_data_long)
+```
+
+### Feature generating for the survival analysis
+
+For survival analysis our dataset must have one column with the age of the animal and one column with the censored status
+
+All animals are dead thus censored status for all entries will be 2=dead, 1=censored 
+```{r}
+new_data_long$status <- 2
+head(data_long)
+```
+
+We will calculate the months, years and the days alive for each animal. We will store these values as numeric
+
+```{r}
+new_data_long$days_alive <- as.numeric(difftime(new_data_long$Dod, new_data_long$Dob, units=c("days")))
+```
+
+
+```{r}
+new_data_long$months_alive <- interval(new_data_long$Dob, new_data_long$Dod) %/% months(1)
+```
+
+```{r}
+new_data_long$years_alive <- interval(new_data_long$Dob, new_data_long$Dod) %/% years(1)
+```
+
+```{r}
+head(new_data_long)
+```
+
+Save the data in a new csv file
+```{r}
+write.csv(new_data_long, file="data_long.csv")
+```
+
+#### Further survival analysis (e.g regression) 
+
+Each animal id must be one row. Thus we will create a new dataset with One-hot encoding for the ConditionsbyAI column. (We will create a column for each condition)
+
+```{r}
+# Create a column for each unique condition
+data_wide <- new_data_long %>%
+  mutate(ConditionPresent = 1) %>%
+  pivot_wider(names_from = ConditionsbyAI, values_from = ConditionPresent, values_fill = list(ConditionPresent = 0))
+
+# Save the data
+write.csv(data_wide, file="data_wide.csv")
+```
+
+
+
+
+
