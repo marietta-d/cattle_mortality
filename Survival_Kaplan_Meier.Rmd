@@ -20,7 +20,7 @@ library(ggpubr)
 
 
 ```{r}
-survival_data_without_outliers <- read.csv("data_without_outliers.csv")
+survival_data_without_outliers <- read.csv("./data/data_without_outliers.csv")
 
 ```
 
@@ -379,13 +379,13 @@ years
 
 
 subset_of_conditions_1_2_3 <- survival_data_without_outliers %>%
-  subset(survival_data$Total_Conditions_per_Animal==1 |survival_data$Total_Conditions_per_Animal==2 | survival_data$Total_Conditions_per_Animal==3)
+  subset(survival_data_without_outliers$Total_Conditions_per_Animal==1 |survival_data_without_outliers$Total_Conditions_per_Animal==2 | survival_data_without_outliers$Total_Conditions_per_Animal==3)
 
 subset_of_conditions_4_5_6 <- survival_data_without_outliers %>%
-  subset(survival_data$Total_Conditions_per_Animal==4 |survival_data$Total_Conditions_per_Animal==5 | survival_data$Total_Conditions_per_Animal==6)
+  subset(survival_data_without_outliers$Total_Conditions_per_Animal==4 |survival_data_without_outliers$Total_Conditions_per_Animal==5 | survival_data_without_outliers$Total_Conditions_per_Animal==6)
 
 subset_of_conditions_7_8_9 <- survival_data_without_outliers %>%
-  subset(survival_data$Total_Conditions_per_Animal==7 |survival_data$Total_Conditions_per_Animal==8 | survival_data$Total_Conditions_per_Animal==9)
+  subset(survival_data_without_outliers$Total_Conditions_per_Animal==7 |survival_data_without_outliers$Total_Conditions_per_Animal==8 | survival_data_without_outliers$Total_Conditions_per_Animal==9)
 
 total_conditions_fit_years <- survfit(Surv(years_alive, status) ~ Total_Conditions_per_Animal, data=survival_data_without_outliers)
 subset_conditions_fit_years_1_2_3<- survfit(Surv(years_alive, status) ~ Total_Conditions_per_Animal, data=subset_of_conditions_1_2_3)
@@ -601,7 +601,7 @@ ggsurvplot(DVO_fit_years,
 days
 ```{r}
 
-DVO_fit_days <- survfit(Surv(days_alive, status) ~ Dvo_Code, data=survival_data)
+DVO_fit_days <- survfit(Surv(days_alive, status) ~ Dvo_Code, data=survival_data_without_outliers)
                      
 ```
 
@@ -630,7 +630,7 @@ survival_DVO_days
 Conditions
 years
 ```{r}
-condition_columns <- c(colnames(survival_data))
+condition_columns <- c(colnames(survival_data_without_outliers))
 condition_columns[17:91]
                      
 ```
@@ -643,157 +643,7 @@ surv_obj_years <- Surv(time = survival_data_without_outliers$years_alive, event 
 
 ```
 
-```{r}
-# Initialize an empty list to store the plots
-# plot_list_days <- list()
-# plot_list_years <- list()
 
-# Loop through the columns 16 to 90 for one-hot encoded conditions
-for (i in 17:91) {
-  condition_name <- colnames(survival_data)[i]
-  
-  # Fit survival models for the condition
-  fit_days <- survfit(surv_obj_days ~ survival_data[[i]])
-  fit_years <- survfit(surv_obj_years ~ survival_data[[i]])
-  
-  # Create plots for days
-  plot_days <- ggsurvplot(
-    fit_days,
-    data = survival_data,
-    pval = TRUE,
-    conf.int = TRUE,
-    risk.table = TRUE,
-    title = paste("Survival Curve for", condition_name, "(Days)"),
-    xlab = "Time (Days)",
-    ylab = "Survival Probability"
-  )
-  
-  # Create plots for years
-  plot_years <- ggsurvplot(
-    fit_years,
-    data = survival_data,
-    pval = TRUE,
-    conf.int = TRUE,
-    risk.table = TRUE,
-    title = paste("Survival Curve for", condition_name, "(Years)"),
-    xlab = "Time (Years)",
-    ylab = "Survival Probability"
-  )
-  
-  # Add plots to the list
-  plot_list_days[[condition_name]] <- plot_days$plot
-  plot_list_years[[condition_name]] <- plot_years$plot
-}
-
-```
-
-
-
-```{r}
-# Combine the plots using arrange_ggsurvplots
-combined_plot_days <- arrange_ggsurvplots(plot_list_days, print = FALSE)
-combined_plot_years <- arrange_ggsurvplots(plot_list_years, print = FALSE)
-
-# Print the combined plots
-print(combined_plot_days)
-print(combined_plot_years)
-
-```
-
-
-```{r}
-condition_columns <- c("No", "SEPTICAEMIA", "ENDOCARDITIS", "TELANGECTASIS", 
-                       "FACTORY.DAMAGE", "CONTAMINATION", "ABSCESS.PYAEMIA", 
-                       "NAD", "FLUKE.DAMAGE", "BRUISING", "NEPHRITIS", 
-                       "FASCIOLIASIS", "PERITONITIS", "TB", 
-                       "PLEUR.PNEUMONIA.GENERAL", "PERICARDITIS", "ACTINO", 
-                       "RESIDUES", "HYDRONEPHROSIS", "HAEMATOMA", 
-                       "ARTHRITIS", "OEDEMA", "PETECHAE.HAEMORRHAGES", 
-                       "TB.GENERALISED", "PLEURISY", "PLEUR.PNEUMONIA.LOCAL", 
-                       "CYSTICERCUS.VIABLE", "EMACIATION", "SCAR.TISSUE", 
-                       "FEVERED", "PYLEONEPHRITIS", "PNEUMONIA", 
-                       "INJECTION.SITES", "ANAEMIA", "JAUNDICE", 
-                       "NEPHRITIS.NEPHROSIS", "NEPHROSIS", "DETAIN", 
-                       "PREG.STATUS", "CONGESTION", "MASTITIS", 
-                       "MULTIPLE.ABSCESS", "INFARCTS", "URAEMIA", 
-                       "SEPTIC.PERITONITIS", "FRACTURE", "ILL.BLED", 
-                       "OTHER.PATHOLOGY", "CIRRHOSIS", 
-                       "CYSTICERCUS.NON.VIABLE", "SUSPECT.TUMOURS", 
-                       "OTHER.PROCESSING", "ABNORMAL.COLOUR", "BURSITIS", 
-                       "TSE.SAMPLE", "ABNORMAL.ODOUR", "XANTHOSIS", 
-                       "POLYARTHRITIS", "NECROSIS", "MELANOMA", 
-                       "WOUNDS", "ENTERITIS", "EOSINOPHILIC.MYOSITIS", 
-                       "ASCITIES", "EXCESS.TEETH", "SARCOCYSTIS", 
-                       "PIGMENTATION", "BLOOD.SPLASH", "DEAD.ON.ARRIVAL", 
-                       "TSE.SAMPLE.ASSOCIATES", "PARASITES", "OVER.30.MONTHS", 
-                       "LUNG.WORM", "TSE.FAILURE", "NO.AM.INSPECTION")
-
-# Initialize lists to store the plots and risk tables
-# plot_list_days <- list()
-# risk_table_list_days <- list()
-# plot_list_years <- list()
-# risk_table_list_years <- list()
-
-# Loop through the condition columns
-for (i in 45:48) {
-  # Fit survival models for the condition
-  condition_name <- condition_columns[i]
-  fit_days <- survfit(surv_obj_days ~ survival_data[[condition_name]])
-  fit_years <- survfit(surv_obj_years ~ survival_data[[condition_name]])
-  
-  # Create plots for days
-  plot_days <- ggsurvplot(
-    fit_days,
-    data = survival_data,
-    pval = TRUE,
-    conf.int = TRUE,
-    risk.table = FALSE,
-    title = paste("Survival Curve for", condition_name, "(Days)"),
-    xlab = "Time (Days)",
-    ylab = "Survival Probability"
-  )
-  
-  print(plot_days)
-  
-  # # Create plots for years
-  # plot_years <- ggsurvplot(
-  #   fit_years,
-  #   data = survival_data,
-  #   pval = TRUE,
-  #   conf.int = TRUE,
-  #   risk.table = TRUE,
-  #   title = paste("Survival Curve for", condition_name, "(Years)"),
-  #   xlab = "Time (Years)",
-  #   ylab = "Survival Probability"
-  # )
-  
-  # # Add only the plot and risk table components to the lists
-  # plot_list_days[[condition_name]] <- plot_days$plot
-  # risk_table_list_days[[condition_name]] <- plot_days$table
-  # plot_list_years[[condition_name]] <- plot_years$plot
-  # risk_table_list_years[[condition_name]] <- plot_years$table
-}
-
-# # Combine the plots using ggarrange
-# combined_plot_days <- ggarrange(plotlist = plot_list_days, ncol = 3, nrow = 3, common.legend = TRUE)
-# combined_risk_table_days <- ggarrange(plotlist = risk_table_list_days, ncol = 3, nrow = 3, common.legend = TRUE)
-# 
-# combined_plot_years <- ggarrange(plotlist = plot_list_years, ncol = 3, nrow = 3, common.legend = TRUE)
-# combined_risk_table_years <- ggarrange(plotlist = risk_table_list_years, ncol = 3, nrow = 3, common.legend = TRUE)
-# 
-# # Save the combined plots with specific width and height
-# ggsave("combined_plot_days.png", combined_plot_days, width = 20, height = 15)
-# ggsave("combined_risk_table_days.png", combined_risk_table_days, width = 20, height = 15)
-# 
-# ggsave("combined_plot_years.png", combined_plot_years, width = 20, height = 15)
-# ggsave("combined_risk_table_years.png", combined_risk_table_years, width = 20, height = 15)
-# 
-# # Optionally, you can also just print them to the output device with specific dimensions
-# print(combined_plot_days)
-# print(combined_risk_table_days)
-# print(combined_plot_years)
-# print(combined_risk_table_years)
-```
 
 
 ```{r}
@@ -827,8 +677,8 @@ condition_columns <- c("No", "SEPTICAEMIA", "ENDOCARDITIS", "TELANGECTASIS",
 for (i in 2:75) {
   # Fit survival models for the condition
   condition_name <- condition_columns[i]
-  fit_days <- survfit(surv_obj_days ~ survival_data[[condition_name]])
-  fit_years <- survfit(surv_obj_years ~ survival_data[[condition_name]])
+  fit_days <- survfit(surv_obj_days ~ survival_data_without_outliers[[condition_name]])
+  fit_years <- survfit(surv_obj_years ~ survival_data_without_outliers[[condition_name]])
   
   # Create plots for days
   plot_days <- ggsurvplot(
@@ -843,7 +693,7 @@ for (i in 2:75) {
   )
   
   print(plot_days)
-  ggsave(paste("bycondition/",condition_name, ".png"), plot=plot_days$plot, width = 8, height = 6)
+  ggsave(paste("bycondition/",condition_name,".png"), plot=plot_days$plot, width = 8, height = 6)
 }
 
 ```
@@ -868,17 +718,21 @@ surv_obj_days <- Surv(time = breed_wide_data$days_alive, event = breed_wide_data
 surv_obj_years <- Surv(time = breed_wide_data$years_alive, event = breed_wide_data$status)
 ```
 
+```{r}
+colnames(breed_wide_data[, 90:184])
+```
+
 
 Plot survival curves for each breed
 ```{r}
 breed_columns <- c("HOL", "FR", "LIM", "AA", "HER", "BB", "CH","MB","DAQ","SHB","SIM" ,"FKV", "SH","AYR" ,"SAL" ,"SBR","SWR", "JER" ,"DEX" ,"LH",
                    "NR","BGA" ,"SHD","IM","LNR","PAR","ROT","GAL","LUI","ST","MRI","DR","HI","AU","MAJ","PIE","WP","KE" ,"EA","SD","ROM","BW","STL",
                    "CHI","BI", "BAZ","SPK","BAR","GU","BDM","GE","UNK","WAG","WG","CHL","WB","BU","TYB","AR","BBR","GLO","ALL","BRA","DEV","JEX",
-                   "CAN","BAL","BRB","LBW","BLG","LAK", "MAR","ENP","FRE","BMS","NOR","BAN","SU","RPL","GAY","MG","BEE","ARM","GAS","MAL","VAN","DN",
+                   "CAN","BAL","BRB","LBW","BLG","LAK", "MAR","ENP","FRE","BMS","NOR","BAN","SU","RPL", "MG","BEE","ARM","MAL","VAN","DN",
                    "VA","PUS","PIN","ANK","BRH","AUB","SI","GRB","LID")
 length(breed_columns)
 # Loop through the condition columns
-for (i in 1:96) {
+for (i in 1:94) {
   # Fit survival models for the condition
   breed_name <- breed_columns[i]
   fit_days <- survfit(surv_obj_days ~ breed_wide_data[[breed_name]])
@@ -897,7 +751,131 @@ for (i in 1:96) {
   )
   
   print(plot_days)
-  ggsave(paste("bybreed/",breed_name, ".png"), plot=plot_days$plot, width = 8, height = 6)
+  ggsave(paste("bybreed/",breed_name,".png"), plot=plot_days$plot, width = 8, height = 6)
 }
 ```
+Plot the curves for top 8 breeds
+```{r}
+N <- 8
+top_8_breeds <- survival_data_without_outliers %>%
+  count(Breed, sort=TRUE) %>%
+  top_n(N, n) %>%
+  pull(Breed)
+
+
+filtered_top_8_breeds <- survival_data_without_outliers %>%
+  filter(Breed %in% top_8_breeds)
+
+
+```
+
+
+Top 8 breeds years
+```{r}
+
+Top_8_breeds_fit_years <- survfit(Surv(years_alive, status) ~ Breed, data=filtered_top_8_breeds)
+                     
+```
+
+
+```{r}
+
+summary(Top_8_breeds_fit_years)$table
+
+```
+
+```{r}
+survival_top_8_breeds_years <- data.frame(time = Top_8_breeds_fit_years$time,
+                  n.risk = Top_8_breeds_fit_years$n.risk,
+                  n.event = Top_8_breeds_fit_years$n.event,
+                  n.censor = Top_8_breeds_fit_years$n.censor,
+                  surv = Top_8_breeds_fit_years$surv,
+                  upper = Top_8_breeds_fit_years$upper,
+                  lower = Top_8_breeds_fit_years$lower
+                  )
+survival_top_8_breeds_years
+```
+
+
+```{r}
+ggsurvplot(Top_8_breeds_fit_years,
+          pval = TRUE, conf.int = TRUE,
+          risk.table = TRUE, # Add risk table
+          risk.table.col = "Breed", # Change risk table color by groups
+          linetype = "Breed", # Change line type by groups
+          surv.median.line = "hv", # Specify median survival
+          ggtheme = theme_bw(), # Change ggplot2 theme
+)
+```
+Breed by production type survival curve
+Dairy:
+```{r}
+top_dairy_breeds <- filtered_top_8_breeds %>%
+  filter(Beef_or_Dairy=="Dairy")
+
+
+top_dairy_breeds_fit_years <- survfit(Surv(years_alive, status) ~ Breed, data=top_dairy_breeds)
+
+km_top_dairy_breed_years <- ggsurvplot(top_dairy_breeds_fit_years,
+          pval = TRUE, conf.int = TRUE,
+          risk.table = TRUE, # Add risk table
+          risk.table.col = "Breed", # Change risk table color by groups
+          linetype = "Breed", # Change line type by groups
+          surv.median.line = "hv", # Specify median survival
+          ggtheme = theme_bw(), # Change ggplot2 theme
+)
+km_top_dairy_breed_years
+ggsave("km_top_dairy_breed_years.png", plot=km_top_dairy_breed_years$plot, width = 8, height = 6)
+```
+
+Breed by production type survival curve
+Beef:
+```{r}
+top_beef_breeds <- filtered_top_8_breeds %>%
+  filter(Beef_or_Dairy=="Beef")
+
+top_beef_breeds_fit_years <- survfit(Surv(years_alive, status) ~ Breed, data=top_beef_breeds)
+
+km_top_6_beef_breeds_years <- ggsurvplot(top_beef_breeds_fit_years,
+          pval = TRUE, conf.int = TRUE,
+          risk.table = TRUE, # Add risk table
+          risk.table.col = "Breed", # Change risk table color by groups
+          linetype = "Breed", # Change line type by groups
+          surv.median.line = "hv", # Specify median survival
+          ggtheme = theme_bw(), # Change ggplot2 theme
+)
+km_top_beef_breeds_years
+ggsave("km_top_beef_breeds_years.png", plot=km_top_beef_breeds_years$plot, width = 8, height = 6)
+```
+
+Top 4 beef breeds
+```{r}
+
+top_beef_breeds <- filtered_top_8_breeds %>%
+  filter(Beef_or_Dairy=="Beef")
+
+N <- 4
+top_4_beef_breeds <- top_beef_breeds %>%
+  count(Breed, sort=TRUE) %>%
+  top_n(N, n) %>%
+  pull(Breed)
+
+
+filtered_top_4_beef_breeds <- top_beef_breeds %>%
+  filter(Breed %in% top_4_beef_breeds)
+
+top_4_beef_breeds_fit_years <- survfit(Surv(years_alive, status) ~ Breed, data=filtered_top_4_beef_breeds)
+
+km_top_4_beef_breeds_years <- ggsurvplot(top_4_beef_breeds_fit_years,
+          pval = TRUE, conf.int = TRUE,
+          risk.table = TRUE, # Add risk table
+          risk.table.col = "Breed", # Change risk table color by groups
+          #linetype = "Breed", # Change line type by groups
+          surv.median.line = "hv", # Specify median survival
+          ggtheme = theme_bw(), # Change ggplot2 theme
+)
+km_top_4_beef_breeds_years
+ggsave("km_top_4_beef_breeds_years.png", plot=km_top_4_beef_breeds_years$plot, width = 8, height = 6)
+```
+
 

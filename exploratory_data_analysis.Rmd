@@ -18,11 +18,12 @@ library(data.table)
 library(ggplot2)
 library(lubridate)
 library(scales)
+library("ggpubr")
 ```
 
 Load dataset 
 ```{r}
-survival_data <- read.csv("data_wide.csv")
+survival_data <- read.csv("./data/data_wide.csv")
 ```
 
 ```{r}
@@ -31,11 +32,7 @@ colnames(survival_data)
 str(survival_data)
 ```
 
-Delete rows where the Sex is "U" (delete 8 rows)
-```{r}
-survival_data <- survival_data %>%
-  filter(Sex!="U")
-```
+
 
 Change the type of variables
 ```{r}
@@ -216,11 +213,13 @@ age_years_vs_prod_box_plot
 
 ```{r}
 outliers1 <- (survival_data$years_alive < quantile(survival_data$years_alive, 0.25) - 1.5*IQR(survival_data$years_alive)) | (survival_data$years_alive > quantile(survival_data$years_alive, 0.75) + 1.5*IQR(survival_data$years_alive)) 
+sum(outliers1)
 ```
 
 
-If we take the 1.5*IQR the data considered outliers are 290063.
-Animals over 7 years old consider outliers, 17% of the female animals and 19% of the Dairy animals 
+
+If we take the 1.5*IQR the data considered outliers are 284802.
+Animals over 7 years old consider outliers, 19% of the female animals and 18% of the Dairy animals 
 ```{r}
 No_Beef <- sum(survival_data$Beef_or_Dairy == "Beef")
 No_Dairy <- sum(survival_data$Beef_or_Dairy == "Dairy")
@@ -229,35 +228,35 @@ No_Female <- sum(survival_data$Sex == "F")
 No_Bull <- sum(survival_data$Sex == "B")
 
 
-outliers1_info <- summary(survival_data[outliers1, c(6, 10, 11, 15)])
+outliers1_info <- summary(survival_data[outliers1, c("Sex", "Beef_or_Dairy", "Total_Conditions_per_Animal", "years_alive")])
 outliers1_info
 ```
 
 
 ```{r}
-paste("proportion of beef animals consider outliers = ", 144027/No_Beef)
-paste("proportion of Dairy animals consider outliers = ", 146036/No_Dairy)
+paste("proportion of beef animals consider outliers = ", 140118/No_Beef)
+paste("proportion of Dairy animals consider outliers = ", 144684/No_Dairy)
 
-paste("proportion of Male animals consider outliers = ", 302/No_Male)
-paste("proportion of Female animals consider outliers = ", 285243/No_Female)
-paste("proportion of Bulls consider outliers = ", 4518/No_Bull)
+paste("proportion of Male animals consider outliers = ", 259/No_Male)
+paste("proportion of Female animals consider outliers = ", 280029/No_Female)
+paste("proportion of Bulls consider outliers = ", 4514/No_Bull)
 ```
 
 If we take the 3*IQR 108030 animals are outliers. Above 10 years old are considered outliers and the proportion of Dairy and Beef outliers is around 4% for both.
 ```{r}
 outliers3 <- (survival_data$years_alive < quantile(survival_data$years_alive, 0.25) - 3*IQR(survival_data$years_alive)) | (survival_data$years_alive > quantile(survival_data$years_alive, 0.75) + 3*IQR(survival_data$years_alive)) 
-
+proportion_of_outliers <-sum(outliers3)/nrow(survival_data) *100
 outliers3_info <- summary(survival_data[outliers3, c(6, 10, 11, 15)])
 outliers3_info
 ```
 
 ```{r}
-paste("proportion of beef animals consider outliers = ", 73826/No_Beef)
-paste("proportion of Dairy animals consider outliers = ", 34204/No_Dairy)
+paste("proportion of beef animals consider outliers = ", 71854/No_Beef*100)
+paste("proportion of Dairy animals consider outliers = ", 33918/No_Dairy*100)
 
-paste("proportion of Male animals consider outliers = ", 55/No_Male)
-paste("proportion of Female animals consider outliers = ", 106629/No_Female)
-paste("proportion of Bulls consider outliers = ", 1346/No_Bull)
+paste("proportion of Male animals consider outliers = ", 44/No_Male *100)
+paste("proportion of Female animals consider outliers = ", 104384/No_Female*100)
+paste("proportion of Bulls consider outliers = ", 1344/No_Bull*100)
 ```
 
 
@@ -445,7 +444,7 @@ Sex:
 ```{r}
 Sex_freq_table <- data_without_outliers %>%
   group_by(Sex) %>%
-  summarise(frequency = n())
+  summarise(frequency = n()) %>%
   arrange(desc(frequency))
 Sex_freq_table
 
@@ -464,10 +463,10 @@ animals_by_sex
 
 animals_by_sex_no_outliers <- ggplot(data_without_outliers, aes(x=Sex)) +
   geom_bar(color="steelblue", fill="steelblue") +
-  labs(title="Animals by sex", x="Sex", y="Animals")+
+  labs(title="Animals by sex (no outliers)", x="Sex", y="Animals")+
   scale_y_continuous(breaks=c(Sex_freq_table$frequency)) +
   theme_minimal()
-ggsave("animals_by_sex.png", plot=animals_by_sex, width = 8, height = 6 )
+ggsave("animals_by_sex_no_outliers.png", plot=animals_by_sex, width = 8, height = 6 )
 animals_by_sex_no_outliers
 
 animals_by_sex_both_plots <- ggarrange(animals_by_sex, animals_by_sex_no_outliers, ncol = 2)
@@ -477,6 +476,7 @@ ggsave("animals_by_sex_both_plots.png", plot=animals_by_sex_both_plots, width = 
 
 
 plot the sex of the animals by production category
+Around half of bulls and female animals is for dairy production and a bit less than one third of the male animals is for dairy production 
 ```{r}
 
 sex_by_production <- ggplot(data_without_outliers, aes(x=Sex)) +
@@ -502,7 +502,7 @@ Herd_freq_table <- data_without_outliers %>%
   arrange(desc(frequency))
 Herd_freq_table <- Herd_freq_table %>%
   mutate(percentage = frequency/total_animals*100)
-
+print(Herd_freq_table)
 paste("mean age for small herds (<100) = ", mean(Herd_freq_table$age_years[Herd_freq_table$frequency < 100]), "years", "total number of small herds = ", nrow(Herd_freq_table[Herd_freq_table$frequency < 100, ]))
 paste("mean age for medium size herds (>=100, <= 1000) = ", mean(Herd_freq_table$age_years[Herd_freq_table$frequency >=100 & Herd_freq_table$frequency <= 1000]), "years", "total number of medium size herds = ", nrow(Herd_freq_table[Herd_freq_table$frequency >=100 & Herd_freq_table$frequency <= 1000, ]))
 paste("mean age for big herds (>1000) = ", mean(Herd_freq_table$age_years[Herd_freq_table$frequency >1000]), "years", "total number of small herds = ", nrow(Herd_freq_table[Herd_freq_table$frequency >1000, ]))
@@ -520,6 +520,9 @@ most_populus_herds_bar_plot <- ggplot(Herd_freq_table[1:10, ], aes(x=factor(Herd
 most_populus_herds_bar_plot
 ggsave("most_populus_herds_bar_plot.png", plot=most_populus_herds_bar_plot, width=8, height=6, bg="white", scale=2)
 ```
+```{r}
+n(filtered_Herd_ids$Herd_Id)
+```
 
 
 ```{r}
@@ -534,8 +537,8 @@ filtered_Herd_ids <- data_without_outliers %>%
   filter(Herd_Id %in% top_herds_ids)
 
 
-big_herd_by_production <- ggplot(filtered_Herd_ids, aes(x=Herd_Id, fill=Beef_or_Dairy)) +
-  geom_bar(color="steelblue") +
+big_herd_by_production <- ggplot(filtered_Herd_ids, aes(x=Herd_Id,  fill=Beef_or_Dairy)) +
+  geom_bar(position="fill", stat="count") +
   labs(title="Herd by type of production", x="Herd id", y="No of Animals")+
   theme_minimal() +
   coord_flip()
@@ -565,27 +568,27 @@ data_without_outliers[data_without_outliers$Abbatoir == "432d3a852c6074754d640e8
 How many abattoirs were active every year we will use the dataset including the outliers
 ```{r}
 # 2018
-data_2018 <- filter(survival_data, format(Dod, "%Y") == "2018")
+data_2018 <- filter(data_without_outliers, format(Dod, "%Y") == "2018")
 abattoirs2018 <- unique(data_2018$Abbatoir)
 num_abbatoirs_2018 <- n_distinct(data_2018$Abbatoir)
 paste("number of Abattoir in 2018", num_abbatoirs_2018)
 # 2019
-data_2019 <- filter(survival_data, format(Dod, "%Y") == "2019")
+data_2019 <- filter(data_without_outliers, format(Dod, "%Y") == "2019")
 abattoirs2019 <- unique(data_2019$Abbatoir)
 num_abbatoirs_2019 <- n_distinct(data_2019$Abbatoir)
 paste("number of Abattoir in 2019", num_abbatoirs_2019)
 # 2020
-data_2020 <- filter(survival_data, format(Dod, "%Y") == "2020")
+data_2020 <- filter(data_without_outliers, format(Dod, "%Y") == "2020")
 abattoirs2020 <- unique(data_2020$Abbatoir)
 num_abbatoirs_2020 <- n_distinct(data_2020$Abbatoir)
 paste("number of Abattoir in 2019", num_abbatoirs_2020)
 # 2021
-data_2021 <- filter(survival_data, format(Dod, "%Y") == "2021")
+data_2021 <- filter(data_without_outliers, format(Dod, "%Y") == "2021")
 abattoirs2021 <- unique(data_2021$Abbatoir)
 num_abbatoirs_2021 <- n_distinct(data_2021$Abbatoir)
 paste("number of Abattoir in 2021", num_abbatoirs_2021)
 # 2022
-data_2022 <- filter(survival_data, format(Dod, "%Y") == "2022")
+data_2022 <- filter(data_without_outliers, format(Dod, "%Y") == "2022")
 abattoirs2022 <- unique(data_2022$Abbatoir)
 num_abbatoirs_2022 <- n_distinct(data_2022$Abbatoir)
 paste("number of Abattoir in 2022", num_abbatoirs_2022)
@@ -722,22 +725,30 @@ Dvo_freq_table <- data_without_outliers %>%
 Dvo_freq_table
 ```
 
+Distribution of Dvo
+Newry has the biggest amount of animals second is Dungannon and third is Armagh. All DVO codes have more than 100k animals each
 ```{r}
-bar_plot_Dvo_by_production <- ggplot(data_without_outliers, aes(x=Dvo_Code, fill = Beef_or_Dairy)) +
-  geom_bar(color="steelblue") +
+bar_plot_Dvo <- ggplot(data_without_outliers, aes(x=Dvo_Code)) +
+  geom_bar(color="steelblue", fill="steelblue") +
   labs(title="Distribution of animals per DVO", x="DVO Code", y="No of Animals")+
   scale_y_continuous(labels = label_number(scale = 1e-3, suffix = "k")) +
+  theme_minimal()
+bar_plot_Dvo
+ggsave("bar_plot_Dvo.png", plot = bar_plot_Dvo, width = 8, height = 6)
+```
+
+the proportion of Dairy animals to per DVO code is between 25% and 40% coleraine has the biggest proportion of dairy animals 
+
+```{r}
+bar_plot_Dvo_by_production <- ggplot(data_without_outliers, aes(x=Dvo_Code, fill = Beef_or_Dairy)) +
+  geom_bar(position="fill", stat="count", color="steelblue") +
+  labs(title="Distribution of animals per DVO", x="DVO Code", y="No of Animals")+
+  #scale_y_continuous(labels = label_number(scale = 1e-3, suffix = "k")) +
   theme_minimal()
 bar_plot_Dvo_by_production
 ggsave("bar_plot_Dvo_by_production.png", plot = bar_plot_Dvo_by_production, width = 8, height = 6)
 ```
 
-
-
-```{r}
-table(data_without_outliers$Dvo_Code, data_without_outliers$Beef_or_Dairy)
-#dfxyz$zxc <- dfxyz$
-```
 
 ```{r}
 # Calculate the exact counts for each Dvo_Code
@@ -855,7 +866,7 @@ ggsave("breed_by_sex.png", plot=breed_by_sex, width=8, height = 6)
 ggsave("breed_by_production.png", plot = breed_by_production, width = 8, height = 6)
 ```
 We have 96 different breeds. 88% of the animals in our data set belong to the 8% of the breeds (top 8 breeds) 
-While 23 breeds have less than 10 animals.
+While 22 breeds have less than 10 animals.
 
 
 Abattoir_._Died_on_Farm:
@@ -987,13 +998,13 @@ ggsave("total_conditions_hist_by_production.png", plot=total_conditions_hist_by_
 Condition columns
 
 ```{r}
-long_survival_data <- read.csv("data_long.csv")
+long_survival_data <- read.csv("./data/data_long.csv")
 ```
 
 
 Change the type of variables
 ```{r}
-long_survival_data[,c("Dob", "Dod")] = lapply(survival_data[,c("Dob", "Dod")],
+long_survival_data[,c("Dob", "Dod")] = lapply(long_survival_data[,c("Dob", "Dod")],
                                 function(x) as.Date(x))
 ```
 
@@ -1004,12 +1015,6 @@ long_survival_data[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Breed", "Sex", "Abatto
                                 function(x) as.factor(x))
 ```
 
-
-Delete rows where the Sex is "U" (delete 8 rows)
-```{r}
-long_survival_data <- long_survival_data %>%
-  filter(Sex!="U")
-```
 
 
 Delete outliers
@@ -1084,7 +1089,7 @@ filtered_conditions_without_zero <- without_zero_conditions %>%
 
 
 
-dist_health_conditions.png <- ggplot(filtered_conditions_without_zero, aes(x=reorder(ConditionsbyAI,ConditionsbyAI,
+dist_health_conditions <- ggplot(filtered_conditions_without_zero, aes(x=reorder(ConditionsbyAI,ConditionsbyAI,
                      function(x) length(x)), fill=Beef_or_Dairy)) +
   geom_bar(color="steelblue") +
   labs(title="Distribution of health conditions (top 10)", x="Condition", y="Frequency") +
@@ -1095,6 +1100,7 @@ dist_health_conditions.png <- ggplot(filtered_conditions_without_zero, aes(x=reo
         panel.background = element_rect(fill = "transparent"), # bg of the panel
         plot.background = element_rect(fill = "transparent", color = NA))  +
   coord_flip()
+dist_health_conditions
 ggsave("x_dist_health_conditions.png", plot=dist_health_conditions.png, width=8, height = 6)
 ```
 
@@ -1166,11 +1172,22 @@ ggsave("sex_conditions_all.png", plot=sex_conditions_all, heigh=10, width = 12)
 
 Save data without outliers as a csv file
 ```{r}
-write.csv(data_without_outliers, file="data_without_outliers.csv")
+write.csv(data_without_outliers, file="./data/data_without_outliers.csv")
 
 ```
 
 
+# TO DO: check for correlations Between mean age and all other variables
+```{r}
+ggplot(filtered_breeds, mapping = aes(days_alive, Breed)) +
+  geom_point()
+```
 
+```{r}
+ggqqplot(data_without_outliers, x = "days_alive",
+   color = "Beef_or_Dairy", 
+   palette = c("#0073C2FF", "#FC4E07"),
+   ggtheme = theme_pubclean())
+```
 
 

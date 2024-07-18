@@ -19,13 +19,14 @@ library(survminer)
 library(data.table)
 library(ggplot2)
 library(lubridate)
+library(tools)
 
 ```
 
 Load complete data file into a new object "raw_data"
 
 ```{r}
-raw_data <- read.csv("data_complete.csv")
+raw_data <- read.csv("./data/data_complete.csv")
 ```
 
 Dimensions of the dataset
@@ -56,6 +57,12 @@ data <- raw_data[, -1]
 head(data)
 ```
 
+
+
+
+### Data preprocessing
+#### Assign the appropriate datatype to variables
+
 change data type of columns as follows:
 factor: Herd_Id, Abbatoir, Dvo_Code, Breed, Sex, Abattoir_._Died_on_Farm, Beef_or_Dairy, ConditionsbyAI
 Dates: Dob, Dod
@@ -63,7 +70,11 @@ integer: Total_Conditions_per_Animal
 
 Before that we have to change all empty characters to Nan 
 ```{r}
-data[data==""] <- NaN
+data[data==""] <- NA
+```
+
+```{r}
+glimpse(data)
 ```
 
 Date of birth and Date of death variables to date data-type
@@ -77,8 +88,17 @@ data[,c("Dob", "Dod")] = lapply(data[,c("Dob", "Dod")],
 glimpse(data)
 ```
 
-### Data preprocessing
-#### Assign the appropriate datatype to variables
+### Delete rows where the DVO code is wrong (all dvo codes above 10)
+
+11898 observations have wrong Dvo and we cannot find the value from Patch area code
+
+```{r}
+# 11898 
+data <- data %>%
+  subset(!data$Dvo_Code >10)
+
+```
+
 
 Change Data type to factor
 ```{r}
@@ -87,10 +107,17 @@ data[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Patch_Area", "Breed", "Sex", "Abatto
                                 function(x) as.factor(x))
 ```
 
+
+```{r}
+glimpse(data)
+```
+
 Check how many levels for each factor
 ```{r}
 sapply(data, nlevels)
 ```
+
+
 #### Check for duplicated entries
 
 We use data.table library because it was more efficient with the large dataset
@@ -114,7 +141,7 @@ sapply(data, function(x) mean(is.na(x)) * 100)
 ```
 
 
-Delete Patch_area column because it has too many missing values (11,702) and we can get the information from Dvo_code variable
+Delete Patch_area column because it has too many missing values (11,702) and we can get the information from Dvo_code variable. After the removal of the wrong DVO codes the missing values in the Pach area was just 44
 ```{r}
 clean_data <- data
 clean_data$Patch_Area <- NULL
@@ -153,6 +180,23 @@ clean_data <- clean_data %>%
 colSums(is.na(clean_data))
 ```
 
+### Delete rows with Sex type="U"
+
+Delete 8 rows
+```{r}
+clean_data <- clean_data %>%
+  filter(Sex!="U")
+
+```
+
+
+
+```{r}
+clean_data <- droplevels(clean_data) 
+print(sapply(clean_data, nlevels))
+print(sapply(data, nlevels))
+```
+
 
 ### Handle ConditionsbyAI variable
 
@@ -163,13 +207,13 @@ We will create different column for each condition
 ```{r}
 # Handle missing values and remove trailing asterisks in the "ConditionsbyAI" column
 clean_data$ConditionsbyAI <- as.character(clean_data$ConditionsbyAI)
-head(data)
+head(clean_data)
 ```
 
 ```{r}
 # Assign the value No for no disease
-clean_data$ConditionsbyAI[(clean_data$ConditionsbyAI)=="NaN" | (clean_data$ConditionsbyAI)=="*" | (clean_data$ConditionsbyAI)=="**"] <- "No"
-
+clean_data$ConditionsbyAI[-is.na(clean_data$ConditionsbyAI) | (clean_data$ConditionsbyAI)=="*" | (clean_data$ConditionsbyAI)=="**"] <- "No"
+head(clean_data)
 ```
 
 
@@ -193,7 +237,7 @@ duplicated_rows_datatable_long <- duplicated(data_table_long)
 sum(duplicated_rows_datatable_long)
 ```
 
-some entries have the same condition twice. This resulted to 391 duplicated entries 
+some entries have the same condition twice. This resulted to 389 duplicated entries 
 ```{r}
 data_long[duplicated_rows_datatable_long, ]
 ```
@@ -215,10 +259,13 @@ data_table_long <- unique(data_table_long)
 
 There are 15 cases where the unpacked of conditions will generate empty strings. (between the two stars)
 ```{r}
-data[data$Animal_Id=="951d86f6b9083d891158f6dbb0ed49efbcfa42bd", "ConditionsbyAI"]
+clean_data[clean_data$Animal_Id=="951d86f6b9083d891158f6dbb0ed49efbcfa42bd", "ConditionsbyAI"]
 ```
 
 Exclude entries with empty string at Conditions
+```{r}
+data_table_long[data_table_long$Animal_Id=="951d86f6b9083d891158f6dbb0ed49efbcfa42bd", ]
+```
 
 ```{r}
 new_data_long <- subset(data_table_long, ConditionsbyAI!="")
@@ -235,6 +282,7 @@ new_data_long$ConditionsbyAI <-as.factor(new_data_long$ConditionsbyAI)
 
 ```{r}
 str(new_data_long)
+nlevels(new_data_long$ConditionsbyAI)
 ```
 
 ### Feature generating for the survival analysis
@@ -268,7 +316,7 @@ head(new_data_long)
 
 Save the data in a new csv file
 ```{r}
-write.csv(new_data_long, file="data_long.csv")
+write.csv(new_data_long, file="./data/data_long.csv")
 ```
 
 #### Further survival analysis (e.g regression) 
@@ -282,10 +330,113 @@ data_wide <- new_data_long %>%
   pivot_wider(names_from = ConditionsbyAI, values_from = ConditionPresent, values_fill = list(ConditionPresent = 0))
 
 # Save the data
-write.csv(data_wide, file="data_wide.csv")
+write.csv(data_wide, file="./data/data_wide.csv")
 ```
 
 
+```{r}
+paste("after cleaning the data we end up with", nrow(data_wide), "observations" )
+paste((nrow(raw_data) - nrow(data_wide)), "rows were deleted which account for the", round(100*((nrow(raw_data) - nrow(data_wide))/nrow(raw_data)), 2), "% of the initial observations")
+```
 
 
+#### Combine the weather data
+```{r}
+# first create month and year columns for merging the data
+
+new_data_long$Year <- as.integer(format(new_data_long$Dod, "%Y"))
+new_data_long$Month <- as.integer(format(new_data_long$Dod, "%m"))
+
+head(new_data_long)
+
+
+```
+
+Rename the levels of DVO factor
+
+```{r}
+levels(new_data_long$Dvo_Code)
+levels(new_data_long$Dvo_Code) <- c("Armagh", "Ballymena", "Coleraine", "Dungannon", "Enniskillen", "LondonDerry", "Mallusk", "Newry", "Nt'Ards", "Omagh")
+```
+
+
+combine all weather data and add a column for the DVO
+
+```{r}
+
+data_dir <- "./data/weather_data"
+
+file_list <- list.files(data_dir, pattern = "*.csv", full.names = TRUE)
+
+# Function to read a CSV file and add a column with part of the file name
+read_and_label <- function(file_path) {
+  # Extract file name without extension
+  file_name <- file_path_sans_ext(basename(file_path))
+
+  label <- sub("_.*", "", file_name)
+  
+  # Read the CSV file
+  data <- read.csv(file_path)
+  
+  # Add the new column with the file name part
+  data$Dvo_Code <- label
+  
+  return(data)
+}
+
+data_list <- lapply(file_list, read_and_label)
+
+combined_data <- bind_rows(data_list)
+
+
+```
+
+
+```{r}
+colnames(combined_data)
+```
+
+merge the two data sets on DVO and Dod (month and year)
+
+```{r}
+merged_data <- merge(new_data_long, combined_data, by = c("Dvo_Code", "Year", "Month"))
+
+nrow(merged_data[merged_data$Year == 2022, ])
+```
+```{r}
+nrow(new_data_long[new_data_long$Year==2022, ])
+
+nrow(new_data_long) - nrow(merged_data)
+
+```
+
+
+We will Keep only the temperature at 2 meters
+
+```{r}
+head(merged_data)
+
+```
+
+
+```{r}
+merged_data <- merged_data[, 1:20]
+
+```
+
+
+One hot encoding ConditionsbyAI for merged data
+
+```{r}
+merged_wide <- merged_data %>%
+  mutate(ConditionPresent = 1) %>%
+  pivot_wider(names_from = ConditionsbyAI, values_from = ConditionPresent, values_fill = list(ConditionPresent = 0))
+
+```
+
+
+save dataset in a csv file
+```{r}
+write.csv(merged_wide, file="./data/merged_weather_wide.csv")
+```
 
