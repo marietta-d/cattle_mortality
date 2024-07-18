@@ -1,0 +1,1331 @@
+---
+title: "eda_combined"
+author: "Marietta_Dalamanga"
+date: "2024-07-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Exploratory data analysis
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(visdat)
+library(splitstackshape)
+library(tidyr)
+library(survminer)
+library(data.table)
+library(ggplot2)
+library(lubridate)
+library(scales)
+library("ggpubr")
+```
+
+Load dataset 
+```{r}
+combined_data <- read.csv("./data/merged_weather_wide.csv")
+head(combined_data)
+```
+
+
+```{r}
+combined_data <- combined_data[, -1]
+colnames(combined_data)
+str(combined_data)
+```
+
+
+Change the type of variables
+```{r}
+combined_data[,c("Dob", "Dod")] = lapply(combined_data[,c("Dob", "Dod")],
+                                function(x) as.Date(x))
+```
+
+
+```{r}
+combined_data[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy")] = 
+  lapply(combined_data[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy")],
+                                function(x) as.factor(x))
+```
+
+```{r}
+total_animals <- as.numeric(nrow(combined_data))
+```
+
+```{r}
+mean_age_days <- mean(combined_data$days_alive)
+mean_age_years <- mean(combined_data$years_alive)
+mean_age_months <- mean(combined_data$months_alive)
+```
+
+
+
+```{r}
+ftable(combined_data$Sex, combined_data$Beef_or_Dairy)
+```
+
+
+### Age variables check for outliers
+
+```{r}
+age <- c("years_alive", "days_alive", "months_alive")
+summary(combined_data[, age])
+
+```
+
+
+Days alive
+```{r}
+days_alive_histogram <-ggplot(combined_data, aes(x=days_alive)) +
+  geom_histogram(binwidth=60, fill="steelblue") +
+  geom_vline(aes(xintercept= mean(days_alive), color="red")) +
+  labs(title="Histogram of age in days", x="days", y="Animals")+
+  theme_minimal()
+ggsave("./data/combined_figs/days_alive_histogram.png", plot=days_alive_histogram, width = 8, height = 6 )
+days_alive_histogram
+```
+
+
+age in years
+```{r}
+years_alive_histogram <- ggplot(combined_data, aes(x=years_alive)) +
+  geom_histogram(binwidth=1, fill="steelblue") +
+  labs(title="Histogram of age in years", x="Years", y="Animals")+
+  theme_minimal()
+ggsave("./data/combined_figs/years_alive_histogram.png", plot=years_alive_histogram, width = 8, height = 6 )
+years_alive_histogram
+```
+
+male animals summary
+```{r}
+m <- combined_data %>%
+  subset(Sex=="M") 
+
+summary(m[, age])
+
+```
+
+female animals summary
+```{r}
+
+f <- combined_data %>%
+  subset(Sex=="F") 
+
+summary(f[, age])
+
+```
+
+bulls summary
+```{r}
+b <- combined_data %>%
+  subset(Sex=="B") 
+
+summary(b[, age])
+
+```
+
+Histogram of age in years by Sex
+```{r}
+years_vs_sex <- ggplot(combined_data, aes(x = years_alive, fill = Sex)) +
+  geom_histogram(alpha = 0.6, position = "identity", bins =10) +
+  facet_wrap(~Sex)+
+  labs(title = "Histograms of Age by Sex",
+       x = "Age in years",
+       y = "No of animals") +
+  theme_minimal()
+ggsave("./data/combined_figs/years_vs_sex.png", plot=years_vs_sex, width = 8, height = 6 )
+years_vs_sex
+```
+
+Dairy animals summary
+```{r}
+d <- combined_data %>%
+  subset(Beef_or_Dairy=="Dairy") 
+
+summary(d[, age])
+
+```
+
+Beef animals summary
+```{r}
+be <- combined_data %>%
+  subset(Beef_or_Dairy=="Beef") 
+
+summary(be[, age])
+
+```
+
+Histogram of age in years by production type
+```{r}
+ggplot(combined_data, aes(x = years_alive, fill = Beef_or_Dairy)) +
+  geom_histogram(alpha = 0.6, position = "identity", bins =10) +
+  facet_wrap(~Beef_or_Dairy)+
+  labs(title = "Histograms of Age by Production type",
+       x = "Age in years",
+       y = "No of animals") +
+  theme_minimal()
+```
+
+
+Box plot of years alive
+```{r}
+age_years_box_plot <- ggplot(combined_data, aes(y=years_alive)) +
+  geom_boxplot() +
+  labs(title="boxplot")+
+  theme_minimal()
+ggsave("./data/combined_figs/age_years_box_plot.png", plot=age_years_box_plot, width = 8, height = 6 )
+age_years_box_plot
+
+```
+
+box plot based on sex
+```{r}
+age_years_vs_sex_box_plot <- ggplot(combined_data, aes(x = Sex, y = years_alive, fill = Sex)) +
+  geom_boxplot() +
+  labs(title = "Box Plot of Age Based on Sex",
+       x = "Sex",
+       y = "Age in years") +
+  theme_minimal()
+ggsave("./data/combined_figs/age_years_vs_sex_box_plot.png", plot=age_years_vs_sex_box_plot, width = 8, height = 6 )
+age_years_vs_sex_box_plot
+```
+
+
+box plot based on production type
+```{r}
+age_years_vs_prod_box_plot <- ggplot(combined_data, aes(x = Beef_or_Dairy, y = years_alive, fill = Beef_or_Dairy)) +
+  geom_boxplot() +
+  labs(title = "Life span per production type (with outliers)",
+       x = "Production type",
+       y = "Age [yr]") + theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+        axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+        axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+        axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+        panel.background = element_rect(fill = "transparent"), # bg of the panel
+        plot.background = element_rect(fill = "transparent", color = NA))  
+ggsave("./data/combined_figs/age_years_vs_prod_box_plot.png", plot=age_years_vs_prod_box_plot, width = 8, height = 6, bg = "transparent" )
+age_years_vs_prod_box_plot
+```
+
+
+#### Check for outliers
+
+```{r}
+outliers1 <- (combined_data$years_alive < quantile(combined_data$years_alive, 0.25) - 1.5*IQR(combined_data$years_alive)) | (combined_data$years_alive > quantile(combined_data$years_alive, 0.75) + 1.5*IQR(combined_data$years_alive)) 
+sum(outliers1)
+```
+
+
+
+If we take the 1.5*IQR the data considered outliers are 223471.
+Animals over 7 years old consider outliers, 19% of the female animals and 18% of the Dairy animals 
+```{r}
+No_Beef <- sum(combined_data$Beef_or_Dairy == "Beef")
+No_Dairy <- sum(combined_data$Beef_or_Dairy == "Dairy")
+No_Male <- sum(combined_data$Sex == "M")
+No_Female <- sum(combined_data$Sex == "F")
+No_Bull <- sum(combined_data$Sex == "B")
+
+
+outliers1_info <- summary(combined_data[outliers1, c("Sex", "Beef_or_Dairy", "Total_Conditions_per_Animal", "years_alive")])
+outliers1_info
+```
+
+
+```{r}
+paste("proportion of beef animals consider outliers = ", 110836/No_Beef)
+paste("proportion of Dairy animals consider outliers = ", 112635/No_Dairy)
+
+paste("proportion of Male animals consider outliers = ", 163/No_Male)
+paste("proportion of Female animals consider outliers = ", 219746/No_Female)
+paste("proportion of Bulls consider outliers = ", 3562/No_Bull)
+proportion_of_outliers1 <-sum(outliers1)/nrow(combined_data) *100
+paste("proportions of outliers=", proportion_of_outliers1)
+```
+
+If we take the 3*IQR 83165 animals are outliers. Above 10 years old are considered outliers, 4% for Dairy and 7% for Female. Overall outliers is approximately 4% of the dataset
+```{r}
+outliers3 <- (combined_data$years_alive < quantile(combined_data$years_alive, 0.25) - 3*IQR(combined_data$years_alive)) | (combined_data$years_alive > quantile(combined_data$years_alive, 0.75) + 3*IQR(combined_data$years_alive)) 
+proportion_of_outliers <-sum(outliers3)/nrow(combined_data) *100
+outliers3_info <- summary(combined_data[outliers3, c("Sex", "Beef_or_Dairy", "Total_Conditions_per_Animal", "years_alive")])
+print(outliers3_info)
+print(proportion_of_outliers)
+print(sum(outliers3))
+```
+
+```{r}
+paste("proportion of beef animals consider outliers = ", 57071/No_Beef*100)
+paste("proportion of Dairy animals consider outliers = ", 26094/No_Dairy*100)
+
+paste("proportion of Male animals consider outliers = ", 30/No_Male *100)
+paste("proportion of Female animals consider outliers = ", 82068/No_Female*100)
+paste("proportion of Bulls consider outliers = ", 1067/No_Bull*100)
+```
+
+
+Delete outliers
+```{r}
+# We will take the 3*IQR
+combined_data_without_outliers <- combined_data[!outliers3, ]
+combined_data_without_outliers
+```
+
+```{r}
+age <- c("years_alive", "days_alive", "months_alive")
+summary(combined_data_without_outliers[, age])
+```
+
+
+
+```{r}
+total_animals_no_outliers <- as.numeric(nrow(combined_data_without_outliers))
+summary(combined_data$years_alive[combined_data$Beef_or_Dairy=="Dairy"])
+summary(combined_data$years_alive[combined_data$Beef_or_Dairy=="Beef"])
+summary(combined_data_without_outliers$years_alive[combined_data_without_outliers$Beef_or_Dairy=="Dairy"])
+summary(combined_data_without_outliers$years_alive[combined_data_without_outliers$Beef_or_Dairy=="Beef"])
+```
+
+male animals no outliers summary
+```{r}
+m <- combined_data_without_outliers %>%
+  subset(Sex=="M") 
+
+summary(m[, age])
+
+```
+
+Female animals no outliers summary
+```{r}
+f <- combined_data_without_outliers %>%
+  subset(Sex=="F") 
+
+summary(f[, age])
+
+```
+
+Bulls no outliers summary
+```{r}
+b <- combined_data_without_outliers %>%
+  subset(Sex=="B") 
+
+summary(b[, age])
+
+```
+
+
+dairy no outliers summary
+```{r}
+d <- combined_data_without_outliers %>%
+  subset(Beef_or_Dairy=="Dairy") 
+
+summary(d[, age])
+
+```
+
+Beef no outliers summary
+```{r}
+be<- combined_data_without_outliers %>%
+  subset(Beef_or_Dairy=="Beef") 
+
+summary(be[, age])
+
+```
+
+
+
+```{r}
+
+# Days alive without outliers
+days_alive_histogram_no_outliers <- ggplot(combined_data_without_outliers, aes(x=days_alive, after_stat(density))) +
+  geom_histogram(binwidth=60, fill="steelblue") +
+  geom_density(alpha=0.2, fill="#FF6666")+
+  geom_vline(aes(xintercept= mean(days_alive), color="red")) +
+  labs(title="Histogram of age in days", x="days", y="Animals")+
+  theme_minimal()
+
+ggsave("./data/combined_figs/days_alive_histogram_no_outliers.png", plot=days_alive_histogram_no_outliers, width = 8, height = 6 )
+days_alive_histogram_no_outliers
+
+```
+
+
+age in years without outliers
+```{r}
+year_alive_histogram_no_outliers <- ggplot(combined_data_without_outliers, aes(x=years_alive)) +
+  geom_histogram(binwidth=1, fill="steelblue") +
+  geom_vline(aes(xintercept= mean(years_alive), color="red")) +
+  labs(title="Histogram of age in years", x="Years", y="Animals")+
+  theme_minimal()
+
+ggsave("./data/combined_figs/year_alive_histogram_no_outliers.png", plot=year_alive_histogram_no_outliers, width = 8, height = 6)
+year_alive_histogram_no_outliers
+
+```
+
+Histogram of age in years by Sex
+```{r}
+Years_alive_by_sex <- ggplot(combined_data_without_outliers, aes(x = years_alive, fill = Sex)) +
+  geom_histogram(alpha = 0.6, position = "identity", bins =10) +
+  facet_wrap(~Sex)+
+  labs(title = "Histograms of Age by Sex",
+       x = "Age in years",
+       y = "No of animals") +
+  theme_minimal()
+
+ggsave("./data/combined_figs/Years_alive_by_sex.png", plot=Years_alive_by_sex, width = 8, height = 6)
+Years_alive_by_sex
+
+```
+
+Histogram of age in years by production type
+```{r}
+years_alive_by_production <- ggplot(combined_data_without_outliers, aes(x = years_alive, fill = Beef_or_Dairy)) +
+  geom_histogram(alpha = 0.6, position = "identity", bins =10) +
+  facet_wrap(~Beef_or_Dairy)+
+  labs(title = "Histograms of Age by Production type",
+       x = "Age in years",
+       y = "No of animals") +
+  theme_minimal()
+
+ggsave("./data/combined_figs/years_alive_by_production.png", plot=years_alive_by_production, width = 8, height = 6)
+years_alive_by_production
+
+```
+
+
+Box plot of years alive
+```{r}
+box_plot_without_outliers <- ggplot(combined_data_without_outliers, aes(y=years_alive)) +
+  geom_boxplot() +
+  labs(title="boxplot")+
+  theme_minimal()
+
+ggsave("./data/combined_figs/box_plot_without_outliers.png", plot=box_plot_without_outliers, width = 8, height = 6)
+box_plot_without_outliers
+
+```
+
+box plot based on sex
+```{r}
+box_plot_age_by_Sex <- ggplot(combined_data_without_outliers, aes(x = Sex, y = years_alive, fill = Sex)) +
+  geom_boxplot() +
+  labs(title = "Box Plot of Age Based on Sex",
+       x = "Sex",
+       y = "Age in years") +
+  theme_minimal()
+
+ggsave("./data/combined_figs/box_plot_age_by_Sex.png", plot=box_plot_age_by_Sex, width = 8, height = 6)
+box_plot_age_by_Sex
+```
+
+
+box plot based on production type
+```{r}
+box_plot_age_by_production <- ggplot(combined_data_without_outliers, aes(x = Beef_or_Dairy, y = years_alive, fill = Beef_or_Dairy)) +
+  geom_boxplot() +
+  labs(title = "Life span per production type (no outliers)",
+       x = "Production type",
+       y = "Age [yr]") + theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+        axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+        axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+        axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+        panel.background = element_rect(fill = "transparent"), # bg of the panel
+        plot.background = element_rect(fill = "transparent", color = NA))  
+
+ggsave("./data/combined_figs/box_plot_age_by_production.png", plot=box_plot_age_by_production, width = 8, height = 6, bg = "transparent")
+box_plot_age_by_production
+
+```
+
+
+
+
+### Categorical variables
+
+Sex:
+
+```{r}
+Sex_freq_table <- combined_data_without_outliers %>%
+  group_by(Sex) %>%
+  summarise(frequency = n()) %>%
+  arrange(desc(frequency))
+Sex_freq_table
+
+```
+
+
+```{r}
+
+animals_by_sex <- ggplot(combined_data, aes(x=Sex)) +
+  geom_bar(color="steelblue", fill="steelblue") +
+  labs(title="Animals by sex", x="Sex", y="Animals")+
+  scale_y_continuous(breaks=c(Sex_freq_table$frequency)) +
+  theme_minimal()
+ggsave("./data/combined_figs/animals_by_sex.png", plot=animals_by_sex, width = 8, height = 6 )
+animals_by_sex
+
+animals_by_sex_no_outliers <- ggplot(combined_data_without_outliers, aes(x=Sex)) +
+  geom_bar(color="steelblue", fill="steelblue") +
+  labs(title="Animals by sex (no outliers)", x="Sex", y="Animals")+
+  scale_y_continuous(breaks=c(Sex_freq_table$frequency)) +
+  theme_minimal()
+ggsave("./data/combined_figs/animals_by_sex_no_outliers.png", plot=animals_by_sex, width = 8, height = 6 )
+animals_by_sex_no_outliers
+
+animals_by_sex_both_plots <- ggarrange(animals_by_sex, animals_by_sex_no_outliers, ncol = 2)
+ggsave("./data/combined_figs/animals_by_sex_both_plots.png", plot=animals_by_sex_both_plots, width = 8, height = 6, bg = "white", scale  = 2)
+
+```
+
+
+plot the sex of the animals by production category
+The number of bulls and female animals that are for Dairy production is around half of the number of annimals for beef production and a bit less than one third of the male animals that are for beef production is for dairy production 
+```{r}
+
+sex_by_production <- ggplot(combined_data_without_outliers, aes(x=Sex)) +
+  geom_bar(color="steelblue", fill="steelblue") +
+  labs(title="Sex of animal by type of production", x="Sex", y="Count")+
+  theme_minimal() +
+  scale_y_continuous(labels = label_number(scale = 1e-3, suffix = "k")) +
+  facet_wrap(~Beef_or_Dairy)
+
+ggsave("./data/combined_figs/sex_by_production.png", plot=sex_by_production, width = 8, height = 6, bg="white", scale=2 )
+sex_by_production
+```
+
+
+
+Herd_id:
+
+```{r}
+
+Herd_freq_table <- combined_data_without_outliers %>%
+  group_by(Herd_Id) %>%
+  summarise(frequency = n(), age_days= mean(days_alive), age_years=mean(years_alive)) %>%
+  arrange(desc(frequency))
+Herd_freq_table <- Herd_freq_table %>%
+  mutate(percentage = frequency/total_animals*100)
+print(Herd_freq_table)
+paste("mean age for small herds (<100) = ", mean(Herd_freq_table$age_years[Herd_freq_table$frequency < 100]), "years", "total number of small herds = ", nrow(Herd_freq_table[Herd_freq_table$frequency < 100, ]))
+paste("mean age for medium size herds (>=100, <= 1000) = ", mean(Herd_freq_table$age_years[Herd_freq_table$frequency >=100 & Herd_freq_table$frequency <= 1000]), "years", "total number of medium size herds = ", nrow(Herd_freq_table[Herd_freq_table$frequency >=100 & Herd_freq_table$frequency <= 1000, ]))
+paste("mean age for big herds (>1000) = ", mean(Herd_freq_table$age_years[Herd_freq_table$frequency >1000]), "years", "total number of small herds = ", nrow(Herd_freq_table[Herd_freq_table$frequency >1000, ]))
+
+```
+
+
+```{r}
+most_populus_herds_bar_plot <- ggplot(Herd_freq_table[1:10, ], aes(x=factor(Herd_Id), y=frequency)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  labs(title="10 most populous herds", x="Herd id", y="No of Animals")+
+  theme_minimal() +
+  scale_y_continuous(labels = label_number(scale = 1e-3, suffix = "k")) +
+  coord_flip()
+most_populus_herds_bar_plot
+ggsave("./data/combined_figs/most_populus_herds_bar_plot.png", plot=most_populus_herds_bar_plot, width=8, height=6, bg="white", scale=2)
+```
+
+
+
+```{r}
+N <- 10
+top_herds_ids <- combined_data_without_outliers %>%
+  count(Herd_Id, sort=TRUE) %>%
+  top_n(N, n) %>%
+  pull(Herd_Id)
+
+
+filtered_Herd_ids <- combined_data_without_outliers %>%
+  filter(Herd_Id %in% top_herds_ids)
+
+
+big_herd_by_production <- ggplot(filtered_Herd_ids, aes(x=Herd_Id,  fill=Beef_or_Dairy)) +
+  geom_bar(position="fill", stat="count") +
+  labs(title="Herd by type of production", x="Herd id", y="No of Animals")+
+  theme_minimal() +
+  coord_flip()
+big_herd_by_production
+ggsave("./data/combined_figs/big_herd_by_production.png", plot=big_herd_by_production, width=8, height=6, bg="white", scale=2)
+```
+
+
+Abattoir:
+```{r} 
+
+abattoir_freq_table <- combined_data_without_outliers %>%
+  group_by(Abbatoir) %>%
+  summarise(frequency = n()) %>%
+  arrange(desc(frequency))
+abattoir_freq_table
+
+```
+
+
+```{r}
+combined_data_without_outliers[combined_data_without_outliers$Abbatoir == "9abde47a328f28fc47333a1711c260a14715c2bb", ]
+combined_data_without_outliers[combined_data_without_outliers$Abbatoir =="52d480596328cca7948b6f1f31e1f2b18590cf10", ]
+combined_data_without_outliers[combined_data_without_outliers$Abbatoir == "432d3a852c6074754d640e8d1369a1c56b0d5805", ]
+```
+
+How many abattoirs were active every year we will use the dataset including the outliers
+```{r}
+# 2018
+data_2018 <- filter(combined_data_without_outliers, format(Dod, "%Y") == "2018")
+abattoirs2018 <- unique(data_2018$Abbatoir)
+num_abbatoirs_2018 <- n_distinct(data_2018$Abbatoir)
+paste("number of Abattoir in 2018", num_abbatoirs_2018)
+# 2019
+data_2019 <- filter(combined_data_without_outliers, format(Dod, "%Y") == "2019")
+abattoirs2019 <- unique(data_2019$Abbatoir)
+num_abbatoirs_2019 <- n_distinct(data_2019$Abbatoir)
+paste("number of Abattoir in 2019", num_abbatoirs_2019)
+# 2020
+data_2020 <- filter(combined_data_without_outliers, format(Dod, "%Y") == "2020")
+abattoirs2020 <- unique(data_2020$Abbatoir)
+num_abbatoirs_2020 <- n_distinct(data_2020$Abbatoir)
+paste("number of Abattoir in 2019", num_abbatoirs_2020)
+# 2021
+data_2021 <- filter(combined_data_without_outliers, format(Dod, "%Y") == "2021")
+abattoirs2021 <- unique(data_2021$Abbatoir)
+num_abbatoirs_2021 <- n_distinct(data_2021$Abbatoir)
+paste("number of Abattoir in 2021", num_abbatoirs_2021)
+
+
+```
+
+
+```{r}
+
+print(abattoirs2018)
+print(abattoirs2019)
+print(abattoirs2020)
+print(abattoirs2021)
+
+```
+
+2018: 
+"9abde47a328f28fc47333a1711c260a14715c2bb" # didn't exist after 2018
+"52d480596328cca7948b6f1f31e1f2b18590cf10" # didn't exist after 2018
+2019:
+"432d3a852c6074754d640e8d1369a1c56b0d5805" # this abatttoir was closed during 2020
+"ba747dbffafe62fb8bea541fd72df6d8c7afcb2f" # this one open in 2019
+
+
+Bar plot of Abattoirs
+```{r}
+abattoir_by_production <- ggplot(combined_data_without_outliers, aes(x=Abbatoir)) +
+  geom_bar(color="steelblue", fill="steelblue") +
+  labs(title="barplot of Abbatoir", x="Abattoir", y="No of Animals")+
+  theme_minimal() +
+  facet_wrap(~Beef_or_Dairy)+
+  coord_flip() +
+  scale_y_continuous(labels = label_number(scale = 1e-3, suffix = "k"))
+
+abattoir_by_production
+ggsave("./data/combined_figs/abattoir_by_production.png", plot=abattoir_by_production, width=8, height=6, bg="white", scale=2)
+```
+
+Dead Animals per year
+
+```{r}
+# 2018
+data_2018_no_outliers <- filter(combined_data_without_outliers, format(Dod, "%Y") == "2018")
+
+# 2019
+data_2019_no_outliers <- filter(combined_data_without_outliers, format(Dod, "%Y") == "2019")
+
+# 2020
+data_2020_no_outliers <- filter(combined_data_without_outliers, format(Dod, "%Y") == "2020")
+
+# 2021
+data_2021_no_outliers <- filter(combined_data_without_outliers, format(Dod, "%Y") == "2021")
+
+```
+
+
+```{r}
+paste("in 2018 we had ", nrow(data_2018_no_outliers), "dead animals")
+paste("in 2019 we had ", nrow(data_2019_no_outliers), "dead animals")
+paste("in 2020 we had ", nrow(data_2020_no_outliers), "dead animals")
+paste("in 2021 we had ", nrow(data_2021_no_outliers), "dead animals")
+
+
+# create a table 
+animals_by_year <- data.frame(year = c("2018", "2019", "2020", "2021"),
+                              count = c(nrow(data_2018_no_outliers), nrow(data_2019_no_outliers), nrow(data_2020_no_outliers), nrow(data_2021_no_outliers)),
+                              mean_age_days = c(mean(data_2018_no_outliers$days_alive), mean(data_2019_no_outliers$days_alive), mean(data_2020_no_outliers$days_alive), mean(data_2021_no_outliers$days_alive)),
+                              mean_age_years = c(mean(data_2018_no_outliers$years_alive), mean(data_2019_no_outliers$years_alive), mean(data_2020_no_outliers$years_alive), mean(data_2021_no_outliers$years_alive))
+                              )
+```
+
+
+```{r}
+animals_by_year
+```
+
+
+Barplot of years
+
+```{r}
+# Plot count by year
+barplot_animal_per_year <- ggplot(animals_by_year, aes(x = factor(year), y = count)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  labs(title = "Dead cattle per year", x = "Year", y = "Cattle") +
+  scale_y_continuous(labels= label_number(scale = 1e-3, suffix = "k")) +
+  theme_minimal()
+
+# Plot mean age in days by year
+mean_age_days_per_year <- ggplot(animals_by_year, aes(x = factor(year), y = mean_age_days)) +
+  geom_line(group = 1, color = "MediumTurquoise") +
+  geom_point(color = "red") +
+  scale_y_continuous(breaks = c(round(animals_by_year$mean_age_days, 2))) +
+  labs(title = "Mean Age in Days by Year", x = "Year", y = "Mean Age (Days)") +
+  theme_minimal()
+
+# Plot mean age in years by year
+mean_age_years_per_year <- ggplot(animals_by_year, aes(x = factor(year), y = mean_age_years)) +
+  geom_line(group= 1, color="MediumTurquoise") +
+  geom_point(color="red") +
+  scale_y_continuous(breaks = c(round(animals_by_year$mean_age_years, 4))) +
+  labs(title = "Mean Age in Years by Year", x = "Year", y = "Mean Age (Years)") +
+  theme_minimal()
+
+
+```
+
+```{r}
+ggsave("./data/combined_figs/barplot_animal_per_year.png", plot = barplot_animal_per_year, width = 8, height = 6)
+ggsave("./data/combined_figs/mean_age_days_per_year.png", plot = mean_age_days_per_year, width = 8, height = 6)
+ggsave("./data/combined_figs/mean_age_years_per_year.png", plot = mean_age_years_per_year, width = 8, height = 6)
+```
+
+```{r}
+barplot_animal_per_year
+mean_age_days_per_year
+mean_age_years_per_year
+```
+
+
+Dvo Code:
+
+```{r}
+Dvo_freq_table <- combined_data_without_outliers %>%
+  group_by(Dvo_Code) %>%
+  summarise(frequency = n()) %>%
+  arrange(desc(frequency))
+Dvo_freq_table
+```
+
+Distribution of Dvo
+Newry has the biggest amount of animals second is Dungannon and third is Armagh. only Enniskillen has less than 100k animals
+```{r}
+bar_plot_Dvo <- ggplot(combined_data_without_outliers, aes(x=Dvo_Code)) +
+  geom_bar(color="steelblue", fill="steelblue") +
+  labs(title="Distribution of animals per DVO", x="DVO Code", y="No of Animals")+
+  scale_y_continuous(labels = label_number(scale = 1e-3, suffix = "k")) +
+  theme_minimal()
+bar_plot_Dvo
+ggsave("./data/combined_figs/bar_plot_Dvo.png", plot = bar_plot_Dvo, width = 8, height = 6)
+```
+
+the proportion of Dairy animals per DVO code is between 25% and 40% coleraine has the biggest proportion of dairy animals 
+
+```{r}
+bar_plot_Dvo_by_production <- ggplot(combined_data_without_outliers, aes(x=Dvo_Code, fill = Beef_or_Dairy)) +
+  geom_bar(position="fill", stat="count", color="steelblue") +
+  labs(title="Distribution of animals per DVO", x="DVO Code", y="No of Animals")+
+  #scale_y_continuous(labels = label_number(scale = 1e-3, suffix = "k")) +
+  theme_minimal()
+bar_plot_Dvo_by_production
+ggsave("./data/combined_figs/bar_plot_Dvo_by_production.png", plot = bar_plot_Dvo_by_production, width = 8, height = 6)
+```
+
+
+```{r}
+# Calculate the exact counts for each Dvo_Code
+counts <- table(combined_data_without_outliers$Dvo_Code)
+counts
+# Sort the counts and select up to 15 unique values
+unique_counts <- sort(unique(as.numeric(counts)), decreasing = TRUE)
+unique_counts
+# Create the plot
+ggplot(combined_data_without_outliers, aes(x=Dvo_Code)) +
+  geom_bar(color="steelblue", fill="steelblue") +
+  labs(title="Barplot of Dvo code", x="Dvo code", y="No of animals") +
+  theme_minimal() +
+  scale_y_continuous(breaks = unique_counts) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+```
+
+
+production by Dvo_Code
+```{r}
+ftable(combined_data_without_outliers$Dvo_Code, combined_data_without_outliers$Beef_or_Dairy)
+
+```
+
+```{r}
+nlevels(combined_data_without_outliers$Breed)
+combined_data_without_outliers %>%
+  count(Breed)
+# drop unused level
+combined_data_without_outliers$Breed <- droplevels(combined_data_without_outliers$Breed)
+nlevels(combined_data_without_outliers$Breed)
+```
+
+Breed:
+82% of animals belongs to the 6.5% of breeds
+```{r}
+Breed_freq_table <- combined_data_without_outliers %>%
+  group_by(Breed) %>%
+  summarise(No_of_animals = n()) %>%
+  arrange(desc(No_of_animals))
+
+
+proportion_of_breeds <- Breed_freq_table$No_of_animals/total_animals_no_outliers * 100
+
+Breed_freq_table <- cbind(Breed_freq_table, proportion_of_breeds)
+
+sum(Breed_freq_table$No_of_animals <10)
+
+# How many breeds have more than 100000 animals
+paste("the proporrtion of breeds with more than 100.000 animals is", sum(Breed_freq_table$No_of_animals > 100000)/nrow(Breed_freq_table)*100, "%")
+Big_breeds <- Breed_freq_table[Breed_freq_table$No_of_animals>100000, ]
+paste("proportion of total animals in breeds with more than 100.000:",  sum(Big_breeds$proportion_of_breeds), "%")
+
+# How many breeds have between 20 and 100.000 animals
+paste("the proporrtion of breeds with animals between 20 and 100.000 is", (sum(Breed_freq_table$No_of_animals >=20 & Breed_freq_table$No_of_animals <= 100000))/nrow(Breed_freq_table)*100, "%")
+average_breeds <- Breed_freq_table[Breed_freq_table$No_of_animals>=20 & Breed_freq_table$No_of_animals<= 100000, ]
+paste("proportion of animals in breeds with more than 20 and less than 100.000 animals is:",  sum(average_breeds$proportion_of_breeds), "%")
+
+# How many breeds have less than 20 animals
+paste("the proporrtion of breeds with less than 20 animals is", sum(Breed_freq_table$No_of_animals <20)/nrow(Breed_freq_table)*100, "%")
+small_breeds <- Breed_freq_table[Breed_freq_table$No_of_animals<20, ]
+paste("proportion of total animals in breeds with less than 20 animals:",  sum(small_breeds$proportion_of_breeds), "%")
+small_breeds
+```
+
+```{r}
+N <- 20
+top_breeds <- combined_data_without_outliers %>%
+  count(Breed, sort=TRUE) %>%
+  top_n(N, n) %>%
+  pull(Breed)
+
+
+filtered_breeds <- combined_data_without_outliers %>%
+  filter(Breed %in% top_breeds)
+
+
+bar_plot_top_breeds <- ggplot(filtered_breeds, aes(x=reorder(Breed,Breed,
+                     function(x) length(x)))) +
+  geom_bar(color="steelblue", fill="steelblue") +
+  labs(title="Top breeds", x="Breed", y="Count")+ theme(axis.text.x = element_text(color = "grey20", size = 14, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+        axis.text.y = element_text(color = "grey20", size = 14, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+        axis.title.x = element_text(color = "grey20", size = 14, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+        axis.title.y = element_text(color = "grey20", size = 14, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+        panel.background = element_rect(fill = "transparent"), # bg of the panel
+        plot.background = element_rect(fill = "transparent", color = NA)) +
+  coord_flip() +
+  scale_y_continuous(labels = label_number(scale = 1e-3, suffix = "k")) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
+
+bar_plot_top_breeds
+ggsave("./data/combined_figs/bar_plot_top_breeds.png", plot = bar_plot_top_breeds, width = 8, height = 6)
+```
+```{r}
+filtered_breeds %>%
+  count(Breed)
+```
+
+
+```{r}
+N <- 20
+top_breeds_sex_production <- combined_data_without_outliers %>%
+  count(Breed, sort=TRUE, Sex, Beef_or_Dairy) %>%
+  top_n(N, n)
+top_breeds_sex_production
+
+# Create the bar plot
+breed_by_sex <- ggplot(top_breeds_sex_production, aes(x=Breed, y=n, fill=Sex)) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  labs(title="Distribution of Breeds by Sex", x="Breed", y="No Of animals") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_y_continuous(labels = scales::comma)
+breed_by_sex
+breed_by_production <- ggplot(top_breeds_sex_production, aes(x=Breed, y=n, fill=Beef_or_Dairy)) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  labs(title="Distribution of breeds by production type", x="Breed", y="No Of animals") +
+  theme(axis.text.x = element_text(color = "grey20", size = 14, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+        axis.text.y = element_text(color = "grey20", size = 14, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+        axis.title.x = element_text(color = "grey20", size = 14, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+        axis.title.y = element_text(color = "grey20", size = 14, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+        panel.background = element_rect(fill = "transparent"), # bg of the panel
+        plot.background = element_rect(fill = "transparent", color = NA)) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  scale_y_continuous(labels = scales::comma)
+breed_by_production
+ggsave("./data/combined_figs/breed_by_sex.png", plot=breed_by_sex, width=8, height = 6)
+ggsave("./data/combined_figs/breed_by_production.png", plot = breed_by_production, width = 8, height = 6)
+```
+We have 92 different breeds. 
+While 20 breeds have less than 10 animals.
+6 breeds have more than 100k animals this is 82% of the total animals
+
+Abattoir_._Died_on_Farm:
+31% of dairy animals died on farm and only 9% of the beef animals died on farm
+```{r}
+No_beef_no_outliers <-sum(combined_data_without_outliers$Beef_or_Dairy=="Beef")
+No_dairy_no_outliers <-sum(combined_data_without_outliers$Beef_or_Dairy=="Dairy")
+```
+
+```{r}
+Where_died_freq_table <- combined_data_without_outliers %>%
+  count(Abattoir_._Died_on_Farm, Beef_or_Dairy)
+Where_died_freq_table
+paste("Proportion of dairy animal died on farm = ", Where_died_freq_table$n[Where_died_freq_table$Abattoir_._Died_on_Farm=="Died on Farm" & Where_died_freq_table$Beef_or_Dairy=="Dairy"]/No_dairy_no_outliers *100, "%")
+paste("Proportion of beef animal died on farm = ", Where_died_freq_table$n[Where_died_freq_table$Abattoir_._Died_on_Farm=="Died on Farm" & Where_died_freq_table$Beef_or_Dairy=="Beef"]/No_beef_no_outliers *100, "%")
+
+```
+
+
+
+```{r}
+place_of_death <- ggplot(combined_data_without_outliers, aes(x=Abattoir_._Died_on_Farm, fill=Beef_or_Dairy)) +
+  geom_bar(color="steelblue") + theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+        axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+        axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+        axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+        panel.background = element_rect(fill = "transparent"), # bg of the panel
+        plot.background = element_rect(fill = "transparent", color = NA)) +
+  labs(title="Place of animal death", x="Place", y="Animals")
+place_of_death
+ggsave("./data/combined_figs/place_of_death.png", plot = place_of_death, width = 8, height = 6)
+```
+
+
+Beef_or_Dairy:
+
+```{r}
+Beef_or_Dairy_freq_table <- combined_data_without_outliers %>%
+  group_by(Beef_or_Dairy) %>%
+  summarise(frequency = n(), prcnt=frequency/total_animals_no_outliers*100) %>%
+  arrange(desc(frequency))
+Beef_or_Dairy_freq_table
+Beef_or_Dairy_freq_table[[2, 2]]
+paste(round(Beef_or_Dairy_freq_table[[1, 3]], 2), "% of the total number of animals is for beef")
+paste(round(Beef_or_Dairy_freq_table[[2, 3]], 2), "% of the total number of animals is for dairy")
+```
+
+```{r}
+beef_or_dairy_barplot <- ggplot(combined_data_without_outliers, aes(x=Beef_or_Dairy)) +
+  geom_bar(color="steelblue", fill="steelblue") +
+  labs(title="Type of production animal", x="Beef or Dairy", y="Animals")+
+  theme_minimal() 
+beef_or_dairy_barplot
+ggsave("./data/combined_figs/beef_or_dairy_barplot.png", plot=beef_or_dairy_barplot, width=8, height = 6)
+
+```
+
+
+
+
+### Numerical Variables
+
+####Total conditions per animal
+```{r}
+
+summary(combined_data_without_outliers[, "Total_Conditions_per_Animal"])
+```
+
+
+
+how many animals per number of conditions?
+```{r}
+
+conditions_table <- table(data_without_outliers$Total_Conditions_per_Animal)
+conditions_table
+paste("animals without conditions:", round(sum(combined_data_without_outliers$Total_Conditions_per_Animal==0)/total_animals_no_outliers*100, 2), "%")
+paste("animals with 1 condition:", round(sum(combined_data_without_outliers$Total_Conditions_per_Animal==1)/total_animals_no_outliers*100, 2), "%")
+paste("animals with 2 conditions:", round(sum(combined_data_without_outliers$Total_Conditions_per_Animal==2)/total_animals_no_outliers*100, 2), "%")
+paste("animals with 3 conditions:", round(sum(combined_data_without_outliers$Total_Conditions_per_Animal==3)/total_animals_no_outliers*100, 2), "%")
+paste("animals with >= 3 conditions:", round(sum(combined_data_without_outliers$Total_Conditions_per_Animal>=3)/total_animals_no_outliers*100, 2), "%")
+
+
+paste("animals with 4 conditions:", round(sum(combined_data_without_outliers$Total_Conditions_per_Animal==4)/total_animals_no_outliers*100, 2), "%")
+paste("animals with 5 conditions:", round(sum(combined_data_without_outliers$Total_Conditions_per_Animal==5)/total_animals_no_outliers*100, 2), "%")
+paste("animals with 6 conditions:", round(sum(combined_data_without_outliers$Total_Conditions_per_Animal==6)/total_animals_no_outliers*100, 2), "%")
+paste("animals with 7 conditions:", round(sum(combined_data_without_outliers$Total_Conditions_per_Animal==7)/total_animals_no_outliers*100, 2), "%")
+paste("animals with 8 conditions:", round(sum(combined_data_without_outliers$Total_Conditions_per_Animal==8)/total_animals_no_outliers*100, 2), "%")
+paste("animals with 9 conditions:", round(sum(combined_data_without_outliers$Total_Conditions_per_Animal==9)/total_animals_no_outliers*100, 2), "%")
+```
+
+Total conditions per animal histogram
+```{r}
+total_conditions_hist <- ggplot(combined_data_without_outliers, aes(x=Total_Conditions_per_Animal))  + scale_y_continuous(trans='log10') +
+  geom_histogram(binwidth=0.5, fill="steelblue") +
+  geom_vline(aes(xintercept= mean(Total_Conditions_per_Animal), color="red")) +
+  labs(title="Total conditions per animal", x="Conditions", y="Animals") +
+  theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+        axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+        axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+        axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+        panel.background = element_rect(fill = "transparent"), # bg of the panel
+        plot.background = element_rect(fill = "transparent", color = NA)) 
+total_conditions_hist
+ggsave("./data/combined_figs/total_conditions_hist.png", plot=total_conditions_hist, width=8, height = 6)
+
+```
+
+Box plot of conditions per animal
+```{r}
+ggplot(combined_data_without_outliers, aes(x=Total_Conditions_per_Animal)) +
+  geom_boxplot() +
+  labs(title="boxplot")+
+  theme_minimal()
+```
+
+
+```{r}
+total_conditions_hist_by_production <- ggplot(combined_data_without_outliers, aes(x=Total_Conditions_per_Animal, fill=Beef_or_Dairy)) +
+  geom_histogram(binwidth=1) +
+  geom_vline(aes(xintercept= mean(Total_Conditions_per_Animal), color="red")) +
+  labs(title="No of conditions per animal by production type", x="conditions", y="Animals") +
+  theme_minimal()
+total_conditions_hist_by_production
+ggsave("./data/combined_figs/total_conditions_hist_by_production.png", plot=total_conditions_hist_by_production, width=8, height = 6)
+```
+
+
+### Temperature
+
+```{r}
+combined_data_without_outliers
+summary(combined_data_without_outliers[, "T_2M"])
+
+```
+
+
+```{r}
+temperature_hist <- ggplot(combined_data_without_outliers, aes(x=T_2M)) +
+  geom_histogram(binwidth=0.5, fill="steelblue") +
+  geom_vline(aes(xintercept= mean(T_2M), color="red")) +
+  labs(title="Temperature during death", x="Temperature at 2m", y="Animals") +
+  theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+        axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+        axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+        axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+        panel.background = element_rect(fill = "transparent"), # bg of the panel
+        plot.background = element_rect(fill = "transparent", color = NA)) 
+temperature_hist
+ggsave("./data/combined_figs/temperature_hist.png", plot=temperature_hist, width=8, height = 6)
+```
+
+```{r}
+library(e1071)
+temperature_skewness_value <- skewness(combined_data_without_outliers$T_2M)
+print(temperature_skewness_value)
+temperature_kurtosis_value <- kurtosis(combined_data_without_outliers$T_2M)
+print(temperature_kurtosis_value)
+paste("with a skewness value of ", temperature_skewness_value, "our data seems to be fairly symmetrical")
+paste("with a kurtosis value of ", temperature_kurtosis_value, "our data seems to have thinner tail than the normal distribution")
+```
+
+
+```{r}
+ggplot(combined_data_without_outliers, aes(y=T_2M)) +
+  geom_boxplot() +
+  labs(title="boxplot of 2m temperature")+
+  theme_minimal()
+```
+
+
+
+```{r}
+box_plot_temperature_by_production <- ggplot(combined_data_without_outliers, aes(x = Beef_or_Dairy, y = T_2M, fill = Beef_or_Dairy)) +
+  geom_boxplot() +
+  labs(title = "Temperature during death by production type",
+       x = "Production type",
+       y = "Temperature C") + theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+        axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+        axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+        axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+        panel.background = element_rect(fill = "transparent"), # bg of the panel
+        plot.background = element_rect(fill = "transparent", color = NA))  
+
+ggsave("./data/combined_figs/box_plot_temperature_by_production.png", plot=box_plot_temperature_by_production, width = 8, height = 6, bg = "transparent")
+box_plot_temperature_by_production
+```
+
+
+```{r}
+box_plot_temperature_by_sex <- ggplot(combined_data_without_outliers, aes(x = Sex, y = T_2M, fill = Sex)) +
+  geom_boxplot() +
+  labs(title = "Temperature during death by Sex",
+       x = "Sex",
+       y = "Temperature C") + theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+        axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+        axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+        axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+        panel.background = element_rect(fill = "transparent"), # bg of the panel
+        plot.background = element_rect(fill = "transparent", color = NA))  
+
+ggsave("./data/combined_figs/box_plot_temperature_by_sex.png", plot=box_plot_temperature_by_sex, width = 8, height = 6, bg = "transparent")
+box_plot_temperature_by_sex
+```
+
+
+
+```{r}
+temperature_by_production_deaths <- ggplot(combined_data_without_outliers, aes(x=T_2M, fill=Beef_or_Dairy)) +
+  geom_histogram(binwidth=1) +
+  geom_vline(aes(xintercept= mean(T_2M), color="red")) +
+  labs(title="Deaths by production type for each temperature", x="Temperature at 2m", y="Animals") +
+  theme_minimal()
+temperature_by_production_deaths
+ggsave("./data/combined_figs/temperature_by_production_deaths.png", plot=temperature_by_production_deaths, width=8, height = 6)
+```
+
+
+
+
+### Condition columns
+
+```{r}
+combined_data_conditions <- combined_data_without_outliers[, 20:92] %>%
+  colSums()
+
+conditions_df <- data.frame(conditions=c(colnames(combined_data_without_outliers[20:92])),
+                            frequency=c(combined_data_conditions))
+rownames(conditions_df) <- NULL
+conditions_df
+
+top_conditions <- conditions_df %>%
+  subset(conditions_df$frequency > 2000)
+top_conditions <- top_conditions[order(-top_conditions$frequency),]
+top_conditions
+
+ggplot(data = top_conditions, aes(x = conditions, y = frequency)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  theme_minimal() +
+  labs(title = "Frequency of Conditions",
+       x = "Condition",
+       y = "Frequency") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+```{r}
+top_conditions_without_no <- top_conditions[-1, ]
+ggplot(top_conditions_without_no, aes(x = conditions, y = frequency)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  theme_minimal() +
+  labs(title = "Frequency of Conditions",
+       x = "Condition",
+       y = "Frequency") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+
+
+##### change all code for new data
+
+```{r}
+long_survival_data <- read.csv("./data/data_long.csv")
+```
+
+
+Change the type of variables
+```{r}
+long_survival_data[,c("Dob", "Dod")] = lapply(long_survival_data[,c("Dob", "Dod")],
+                                function(x) as.Date(x))
+```
+
+
+```{r}
+long_survival_data[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy")] = 
+  lapply(long_survival_data[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy")],
+                                function(x) as.factor(x))
+```
+
+
+
+Delete outliers
+```{r}
+outliers_long3 <- (long_survival_data$years_alive < quantile(long_survival_data$years_alive, 0.25) - 3*IQR(long_survival_data$years_alive)) | (long_survival_data$years_alive > quantile(long_survival_data$years_alive, 0.75) + 3*IQR(long_survival_data$years_alive)) 
+
+```
+
+Delete outliers
+```{r}
+# We will take the 3*IQR
+long_data_without_outliers <- long_survival_data[!outliers_long3, ]
+long_data_without_outliers
+```
+
+
+
+Frequency table of conditions
+
+```{r}
+
+conditions_freq_table <- long_data_without_outliers %>%
+  group_by(ConditionsbyAI) %>%
+  summarise(frequency = n()) %>%
+  arrange(desc(frequency))
+conditions_freq_table
+```
+
+```{r}
+conditions_type_sex_freq_table <- long_data_without_outliers %>%
+  group_by(ConditionsbyAI, Sex, Beef_or_Dairy) %>%
+  summarise(frequency = n(), .groups = "drop") %>%
+  arrange(desc(frequency))
+
+conditions_type_sex_freq_table
+```
+
+
+```{r}
+N <- 10
+top_conditions <- long_data_without_outliers %>%
+  count(ConditionsbyAI, sort=TRUE) %>%
+  top_n(N, n) %>%
+  pull(ConditionsbyAI)
+
+filtered_conditions <- long_data_without_outliers %>%
+  filter(ConditionsbyAI %in% top_conditions)
+
+
+ggplot(filtered_conditions, aes(x=ConditionsbyAI)) +
+  geom_bar(color="steelblue", fill="steelblue") +
+  labs(title="barplot of conditions", x="Condition", y="Frequency")
+  theme_minimal() +
+  coord_flip()
+```
+
+
+filter out zero conditions
+```{r}
+without_zero_conditions <- long_data_without_outliers %>%
+  filter(ConditionsbyAI!="No")
+without_zero_conditions
+
+N <- 10
+top_conditions_without_zero <- without_zero_conditions %>%
+  count(ConditionsbyAI, sort=TRUE) %>%
+  top_n(N, n) %>%
+  pull(ConditionsbyAI)
+
+filtered_conditions_without_zero <- without_zero_conditions %>%
+  filter(ConditionsbyAI %in% top_conditions)
+
+
+
+dist_health_conditions <- ggplot(filtered_conditions_without_zero, aes(x=reorder(ConditionsbyAI,ConditionsbyAI,
+                     function(x) length(x)), fill=Beef_or_Dairy)) +
+  geom_bar(color="steelblue") +
+  labs(title="Distribution of health conditions (top 10)", x="Condition", y="Frequency") +
+  theme(axis.text.x = element_text(color = "grey20", size = 15, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+        axis.text.y = element_text(color = "grey20", size = 15, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+        axis.title.x = element_text(color = "grey20", size = 15, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+        axis.title.y = element_text(color = "grey20", size = 15, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+        panel.background = element_rect(fill = "transparent"), # bg of the panel
+        plot.background = element_rect(fill = "transparent", color = NA))  +
+  coord_flip()
+dist_health_conditions
+ggsave("x_dist_health_conditions.png", plot=dist_health_conditions.png, width=8, height = 6)
+```
+
+
+```{r}
+
+sorted_data <- without_zero_conditions[order(without_zero_conditions$ConditionsbyAI, decreasing = FALSE), ] 
+
+type_conditions_1 <- ggplot(sorted_data[1: 185000, ], aes(x=ConditionsbyAI, fill = Beef_or_Dairy)) +
+  geom_bar(color="steelblue") +
+  labs(title="Conditions by production", x="Condition", y="Frequency")+
+  theme_minimal() +
+  coord_flip()
+
+type_conditions_2 <-ggplot(sorted_data[185000: 250000, ], aes(x=ConditionsbyAI, fill = Beef_or_Dairy)) +
+  geom_bar(color="steelblue") +
+  labs(title="Conditions by production", x="Condition", y="Frequency")+
+  theme_minimal() +
+  coord_flip()
+
+type_conditions_3 <-ggplot(sorted_data[250000: 450000, ], aes(x=ConditionsbyAI, fill = Beef_or_Dairy)) +
+  geom_bar(color="steelblue") +
+  labs(title="Conditions by production", x="Condition", y="Frequency")+
+  theme_minimal() +
+  coord_flip()
+
+type_conditions_4 <-ggplot(sorted_data[450000:565052, ], aes(x=ConditionsbyAI, fill = Beef_or_Dairy)) +
+  geom_bar(color="steelblue") +
+  labs(title="Conditions by production", x="Condition", y="Frequency")+
+  theme_minimal() +
+  coord_flip()
+
+
+production_conditions_all <- ggarrange(type_conditions_1, type_conditions_2, type_conditions_3, type_conditions_4, nrow = 2, ncol=2)
+production_conditions_all
+ggsave("production_conditions_all.png", plot=production_conditions_all, heigh=10, width = 12)
+```
+
+```{r}
+sex_condition_1 <-ggplot(sorted_data[1: 185000, ], aes(x=ConditionsbyAI, fill = Sex)) +
+  geom_bar(color="steelblue") +
+  labs(title="Conditions by sex", x="Condition", y="Frequency")+
+  theme_minimal() +
+  coord_flip()
+
+sex_condition_2 <-ggplot(sorted_data[185000: 250000, ], aes(x=ConditionsbyAI, fill = Sex)) +
+  geom_bar(color="steelblue") +
+  labs(title="Conditions by sex", x="Condition", y="Frequency")+
+  theme_minimal() +
+  coord_flip()
+
+sex_condition_3 <-ggplot(sorted_data[250000: 450000, ], aes(x=ConditionsbyAI, fill = Sex)) +
+  geom_bar(color="steelblue") +
+  labs(title="Conditions by sex", x="Condition", y="Frequency")+
+  theme_minimal() +
+  coord_flip()
+
+sex_condition_4 <-ggplot(sorted_data[450000:565052, ], aes(x=ConditionsbyAI, fill = Sex)) +
+  geom_bar(color="steelblue") +
+  labs(title="Conditions by sex", x="Condition", y="Frequency")+
+  theme_minimal() +
+  coord_flip()
+
+sex_conditions_all <- ggarrange(sex_condition_1, sex_condition_2, sex_condition_3, sex_condition_4, nrow = 2, ncol=2)
+
+ggsave("sex_conditions_all.png", plot=sex_conditions_all, heigh=10, width = 12)
+```
+
+
+Save data without outliers as a csv file
+```{r}
+write.csv(combined_data_without_outliers, file="./data/combined_data_without_outliers.csv")
+
+```
+
+
+# TO DO: check for correlations Between mean age and all other variables
+```{r}
+ggplot(filtered_breeds, mapping = aes(days_alive, Breed)) +
+  geom_point()
+```
+
+```{r}
+ggqqplot(data_without_outliers, x = "days_alive",
+   color = "Beef_or_Dairy", 
+   palette = c("#0073C2FF", "#FC4E07"),
+   ggtheme = theme_pubclean())
+```
+
+

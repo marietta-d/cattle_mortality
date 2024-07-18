@@ -1,0 +1,97 @@
+---
+title: "fit_distributions"
+author: "Marietta_Dalamanga"
+date: "2024-07-14"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(survival)
+library(survminer)
+library(ggplot2)
+library(ggpubr)
+library(fitdistrplus)
+library(logspline)
+library(fitur)
+library(actuar)
+```
+
+
+```{r}
+unique(survival_data_without_outliers$months_alive)
+survival_data_without_outliers[survival_data_without_outliers$months_alive==0, ]
+new_df_fit_distr <- survival_data_without_outliers %>%
+  mutate(months_alive = ifelse(months_alive == 0, -10000, months_alive))
+new_df_fit_distr <- new_df_fit_distr %>%
+  mutate(months_alive = ifelse(months_alive == 1, 1.1, months_alive))
+summary(new_df_fit_distr)
+```
+
+
+```{r}
+baseline_survival_months <- survfit(Surv(months_alive, status) ~ 1, data = new_df_fit_distr)
+summary(baseline_survival_months$surv)
+log_log_s <- log(-log(baseline_survival_months$surv))
+log_t <- log(baseline_survival_months$time)
+log_log_s
+log_t
+summary(log_log_s)
+baseline_survival_months_lm <- lm(log_log_s ~ log_t)
+baseline_survival_months_lm %>%
+  broom::augment() %>%
+  ggplot(aes(x = log_t)) +
+  geom_point(aes(y = log_log_s)) +
+  geom_line(aes(y = .fitted), linetype = 2, color = "goldenrod") +
+  theme_light()
+```
+
+
+```{r}
+x <- survival_data_without_outliers$months_alive
+```
+
+```{r}
+descdist(data=x, discrete=FALSE)
+```
+
+```{r}
+library(stats)
+normal_fit <- fitdist(x, "norm")
+weibull_fit <- fitdist(x, "weibull", lower = c(0, 0), start = list(scale = 1, shape = 1), control=list(trace=1, REPORT=1))
+exp_fit <- fitdist(x, "exp")
+
+```
+
+
+```{r}
+gamma_fit <- fitdist(x, "gamma", lower = c(0, 0), start = list(scale = 1, shape = 1), control=list(trace=1, REPORT=1))
+```
+
+```{r}
+plot(normal_fit)
+```
+
+```{r}
+plot(gamma_fit)
+```
+
+
+```{r}
+plot(exp_fit)
+```
+
+
+```{r}
+plot(weibull_fit)
+```
+
+
+
+

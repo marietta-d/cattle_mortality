@@ -1,0 +1,88 @@
+---
+title: "prepare_data_for_modelling"
+author: "Marietta_Dalamanga"
+date: "2024-07-14"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(caret)
+
+```
+
+
+```{r}
+breed_wide_data <- read.csv("./data/breed_wide.csv")
+conditions_wide_data <- read_csv("./data/combined_data_without_outliers.csv", show_col_types = FALSE)
+```
+
+
+```{r}
+colnames(conditions_wide_data)
+```
+
+I will use the conditions wide data to split the data set into 3 parts 60% training set, 20% validation set and 20% test set.
+the analysis will be performed for months_alive
+First I will delete the columns that are of no use. These are: first index column, animal_id, Dob, Dod, days_alive, years_alive
+```{r}
+
+data <- conditions_wide_data[, -c(1, 10, 11, 16, 18)]
+```
+
+
+```{r}
+data
+```
+
+
+Split the dataset into training and test set
+```{r}
+set.seed(123)
+indeces_intrain <-createDataPartition(y=data$months_alive, p=0.6, list=FALSE)
+
+training_data <- data[indeces_intrain, ]
+testing_data <-data[-indeces_intrain, ]
+
+nrow(training_data) + nrow(testing_data)
+print(paste("observations in training set:", nrow(training_data)))
+print(paste("observations in test set:", nrow(testing_data)))
+```
+
+Further split the test set into half for test and half for validation set
+```{r}
+set.seed(123)
+val_ind <-createDataPartition(y=testing_data$months_alive, p=0.5, list=FALSE)
+test_data <- testing_data[val_ind, ]
+validation_data <-testing_data[-val_ind, ]
+
+nrow(test_data) + nrow(validation_data)
+print(paste("observations in validation set:", nrow(validation_data)))
+print(paste("observations in test set:", nrow(test_data)))
+```
+
+check sets:
+```{r}
+nrow(training_data) + nrow(validation_data) + nrow(test_data)
+
+```
+
+
+
+
+save datasets in csv files
+```{r}
+write.csv(training_data, "./data/training_data.csv", row.names = FALSE)
+write.csv(validation_data, "./data/validation_data.csv", row.names = FALSE)
+write.csv(testing_data, "./data/test_data.csv", row.names = FALSE)
+```
+
+
+
