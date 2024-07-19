@@ -2,57 +2,74 @@
 title: "log_rank_tests"
 author: "Marietta_Dalamanga"
 date: "2024-07-14"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 
 
-We will perform log rank tests for all variables for survival in months and years
+```{r}
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(caret)
+library(ggplot2)
+library(scales)
+library(survival)
+library(survminer)
+```
+
+
+
+#### Log_rank test for beef_data
+
+
+```{r}
+beef_data <- read.csv("./data/beef_data.csv")
+dairy_data <- read.csv("./data/dairy_data.csv")
+```
+
+
+We will perform log rank tests for all variables for survival in months in beef data
 
 ```{r}
 
-variables <- colnames(breed_wide_data)
-variables[3]
+variables <- colnames(beef_data)
+variables
 ```
 
 log-rank test for herd id
 ```{r}
 
-log_rank_months_herdid <- survdiff(Surv(time = breed_wide_data$months_alive, event = breed_wide_data$status) ~ as.factor(breed_wide_data$Herd_Id), data=breed_wide_data)
+log_rank_months_herdid <- survdiff(Surv(time = beef_data$months_alive, event = beef_data$status) ~ as.factor(beef_data$Herd_Id), data=beef_data)
 print(log_rank_months_herdid)
 ```
 
 logrank test for temperature
 ```{r}
-log_rank_months_temperature <- survdiff(Surv(time = breed_wide_data$months_alive, event = breed_wide_data$status) ~ breed_wide_data$T_2M, data=breed_wide_data)
+log_rank_months_temperature <- survdiff(Surv(time = beef_data$months_alive, event = beef_data$status) ~ beef_data$T_2M, data=beef_data)
 print(log_rank_months_temperature)
 ```
 
 
-Condition index number 89, name TSE.FAILURE should be removed from data set
-
-```{r}
-variables[89]
-variables
-breed_wide_data[breed_wide_data$TSE.FAILURE == 1,]
-```
 log-rank test for each condition
 ```{r}
-variables <- colnames(breed_wide_data)
+variables <- colnames(beef_data)
 
-for(i in 20:92){
+for(i in 14:41){
   variable_name <- variables[i]
-  log_rank_months <- survdiff(Surv(time = breed_wide_data$months_alive, event = breed_wide_data$status) ~ breed_wide_data[[variable_name]], data=breed_wide_data)
+  log_rank_months <- survdiff(Surv(time = beef_data$months_alive, event = beef_data$status) ~ as.factor(beef_data[[variable_name]]), data=beef_data)
   print(log_rank_months)
 }
 ```
 
 
-DVO, Herd id, Abattoir, Sex, place of death, beef or dairy, total conditions per animal, temperature, RH2M
+DVO, Herd id, Abattoir, Breed, Sex, place of death, total conditions per animal, temperature, RH2M
 ```{r}
-for(i in c(2,6,7,8,11,12,13,18,19)){
+for(i in c(1,4,5,6,7,8,9,12,13)){
   variable_name <- variables[i]
-  log_rank_months <- survdiff(Surv(time = breed_wide_data$months_alive, event = breed_wide_data$status) ~ breed_wide_data[[variable_name]], data=breed_wide_data)
+  log_rank_months <- survdiff(Surv(time = beef_data$months_alive, event = beef_data$status) ~ as.factor(beef_data[[variable_name]]), data=beef_data)
   print(log_rank_months)
 }
 ```
@@ -60,53 +77,76 @@ for(i in c(2,6,7,8,11,12,13,18,19)){
 further investigations for total conditions
 first check if having no conditions is significant
 ```{r}
-total_conditions_no_vs_all_other <- breed_wide_data %>%
+total_conditions_no_vs_all_other <- beef_data %>%
   mutate(conditions = ifelse(Total_Conditions_per_Animal == 0, 0, 1))
 total_conditions_no_vs_all_other
 
-log_rank_months_no_conditions_vs_other <- survdiff(Surv(time = total_conditions_no_vs_all_other$months_alive, event = total_conditions_no_vs_all_other$status) ~ total_conditions_no_vs_all_other$conditions, data=total_conditions_no_vs_all_other)
+log_rank_months_no_conditions_vs_other <- survdiff(Surv(time = total_conditions_no_vs_all_other$months_alive, event = total_conditions_no_vs_all_other$status) ~ as.factor(total_conditions_no_vs_all_other$conditions), data=total_conditions_no_vs_all_other)
 print(log_rank_months_no_conditions_vs_other)
 ```
 
 
-Test is not significant only for 9 conditions but we have only 2 observations
 ```{r}
-total_conditions_more_than_9_vs_all_other <- breed_wide_data %>%
-  mutate(conditions = ifelse(Total_Conditions_per_Animal ==9, 0, 1))
+total_conditions_more_than_9_vs_all_other <- beef_data %>%
+  mutate(conditions = ifelse(Total_Conditions_per_Animal ==7, 0, 1))
 
 
-log_rank_months_total_conditions_more_than_9_vs_all_other <- survdiff(Surv(time = total_conditions_more_than_9_vs_all_other$months_alive, event = total_conditions_more_than_9_vs_all_other$status) ~ total_conditions_more_than_9_vs_all_other$conditions, data=total_conditions_more_than_9_vs_all_other)
+log_rank_months_total_conditions_more_than_9_vs_all_other <- survdiff(Surv(time = total_conditions_more_than_9_vs_all_other$months_alive, event = total_conditions_more_than_9_vs_all_other$status) ~ as.factor(total_conditions_more_than_9_vs_all_other$conditions), data=total_conditions_more_than_9_vs_all_other)
 print(log_rank_months_total_conditions_more_than_9_vs_all_other)
 ```
 
 
-Log-rank test for abattoir, DVO and sex
+
+#### Log_rank test for dairy_data
+
+
+We will perform log rank tests for all variables for survival in months
+
 ```{r}
-for(i in 4:6){
+
+variables <- colnames(dairy_data)
+variables
+```
+
+log-rank test for each condition
+```{r}
+variables <- colnames(dairy_data)
+
+for(i in 14:41){
   variable_name <- variables[i]
-  log_rank_months <- survdiff(Surv(time = breed_wide_data$months_alive, event = breed_wide_data$status) ~ breed_wide_data[[variable_name]], data=breed_wide_data)
+  log_rank_months <- survdiff(Surv(time = dairy_data$months_alive, event = dairy_data$status) ~ as.factor(dairy_data[[variable_name]]), data=dairy_data)
   print(log_rank_months)
 }
 ```
 
-Log_rank test for each breed
-```{r}
 
-colSums(breed_wide_data[, 91:184])
-        
-for(i in 91:184){
+DVO, Herd id, Abattoir, Breed, Sex, place of death, total conditions per animal, temperature, RH2M
+```{r}
+for(i in c(1,4,5,6,7,8,9,12,13)){
   variable_name <- variables[i]
-  log_rank_months <- survdiff(Surv(time = breed_wide_data$months_alive, event = breed_wide_data$status) ~ breed_wide_data[[variable_name]], data=breed_wide_data)
+  log_rank_months <- survdiff(Surv(time = dairy_data$months_alive, event = dairy_data$status) ~ as.factor(dairy_data[[variable_name]]), data=dairy_data)
   print(log_rank_months)
 }
 ```
 
+further investigations for total conditions
+first check if having no conditions is significant
 ```{r}
-log_rank_months_breed <- survdiff(Surv(time = survival_data_without_outliers$months_alive, event = survival_data_without_outliers$status) ~ survival_data_without_outliers$Breed, data=survival_data_without_outliers)
-print(log_rank_months_breed)
+total_conditions_no_vs_all_other <- dairy_data %>%
+  mutate(conditions = ifelse(Total_Conditions_per_Animal == 0, 0, 1))
+total_conditions_no_vs_all_other
 
+log_rank_months_no_conditions_vs_other <- survdiff(Surv(time = total_conditions_no_vs_all_other$months_alive, event = total_conditions_no_vs_all_other$status) ~ as.factor(total_conditions_no_vs_all_other$conditions), data=total_conditions_no_vs_all_other)
+print(log_rank_months_no_conditions_vs_other)
 ```
 
 
+Test is not significant only for 8 & 9 conditions but we have only 11 observations for 8 conditions and 2 observations for 9
+```{r}
+total_conditions_more_than_9_vs_all_other <- dairy_data %>%
+  mutate(conditions = ifelse(Total_Conditions_per_Animal ==9, 0, 1))
 
 
+log_rank_months_total_conditions_more_than_9_vs_all_other <- survdiff(Surv(time = total_conditions_more_than_9_vs_all_other$months_alive, event = total_conditions_more_than_9_vs_all_other$status) ~ as.factor(total_conditions_more_than_9_vs_all_other$conditions), data=total_conditions_more_than_9_vs_all_other)
+print(log_rank_months_total_conditions_more_than_9_vs_all_other)
+```

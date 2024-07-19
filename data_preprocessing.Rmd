@@ -425,6 +425,81 @@ merged_data <- merged_data[, 1:20]
 ```
 
 
+
+# combine the average herd size in the merged data
+```{r}
+data_dir <- "./data/herd_size_data"
+
+file_list <- list.files(data_dir, pattern = "*.csv", full.names = TRUE)
+
+# Function to read a CSV file and add a column with part of the file name
+read_and_label <- function(file_path) {
+  # Extract file name without extension
+  file_name <- file_path_sans_ext(basename(file_path))
+
+  label <- sub("_.*", "", file_name)
+  
+  # Read the CSV file
+  data <- read.csv(file_path)
+  
+  # Add the new column with the file name part
+  data$Year <- label
+  
+  return(data)
+}
+
+data_list <- lapply(file_list, read_and_label)
+
+combined_data <- bind_rows(data_list)
+
+```
+
+```{r}
+str(combined_data)
+combined_data$Year <- as.integer(combined_data$Year)
+
+```
+
+
+```{r}
+str(merged_data)
+# change merged_data herd id to character
+merged_data$Herd_Id <- as.character(merged_data$Herd_Id)
+```
+
+
+```{r}
+str(merged_data)
+```
+```{r}
+herd_id_size <- combined_data$Herd_Id
+
+herd_id_old_data <- merged_data$Herd_Id
+
+common_ids <- intersect(herd_id_size, herd_id_old_data)
+common_ids
+sum(herd_id_size%in%herd_id_old_data)
+```
+```{r}
+unique(sort(herd_id_size))
+```
+
+
+```{r}
+unique(sort(herd_id_old_data))
+```
+
+
+### I dont have the same herd Id's in the two datasets ###
+
+
+```{r}
+colnames(merged_data)
+```
+
+
+
+
 One hot encoding ConditionsbyAI for merged data
 
 ```{r}

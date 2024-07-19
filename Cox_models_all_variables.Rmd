@@ -14,25 +14,23 @@ library(survival)
 library(survminer)
 ```
 
-load datasets
+load dairy datasets
 ```{r}
-train_data <- read_csv("./data/training_data.csv")
-validation_data <- read_csv(("./data/validation_data.csv"))
-
+train_data <- read_csv("./data/dairy_training_data.csv", show_col_types = FALSE)
+validation_data <- read_csv("./data/dairyf_validation_data.csv", show_col_types = FALSE)
 ```
-
 
 
 ```{r}
 variables <- variable.names(train_data)
-variables[-c(11, 12)]
+variables
+#variables[-c(11, 12)]
 ```
 
 Change type of data factor
 ```{r}
-train_data[,c("Dvo_Code", "Year", "Month",  "Herd_Id", "Abbatoir", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy")] = 
-  lapply(train_data[,c("Dvo_Code", "Year", "Month",  "Herd_Id", "Abbatoir", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy")],
-                                function(x) as.factor(x))
+train_data[,c("Dvo_Code", "Year", "Month",  "Herd_Id", "Abbatoir", "Breed", "Sex", "Abattoir_._Died_on_Farm")] =
+  lapply(train_data[,c("Dvo_Code", "Year", "Month",  "Herd_Id", "Abbatoir", "Breed", "Sex", "Abattoir_._Died_on_Farm")], function(x) as.factor(x))
 ```
 
 
@@ -44,14 +42,16 @@ train_data1 <- train_data[1:10, ]
 create Survival objects for each variable
 ```{r}
 survival_object <- sapply(variables, function(x) as.formula(paste("Surv(months_alive, status) ~ ", x)))
-
+survival_object
 ```
 
-
+```{r}
+cox_model <- coxph(Surv(months_alive, status) ~ FASCIOLIASIS + FLUKE.DAMAGE + TB + FACTORY.DAMAGE + No + EMACIATION + TB.GENERALISED, data = train_data )
+summary(cox_model)
+```
 Create cox model for each variable
 ```{r}
 cox_model <- lapply(survival_object, function(x){coxph(x, data=train_data1)})
-
 ```
 
 Create a dataframe with the results of Cox model

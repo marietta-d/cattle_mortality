@@ -15,74 +15,277 @@ library(tidyverse)
 library(dplyr)
 library(tidyr)
 library(caret)
-
+library(ggplot2)
+library(scales)
 ```
 
-
 ```{r}
-breed_wide_data <- read.csv("./data/breed_wide.csv")
-conditions_wide_data <- read_csv("./data/combined_data_without_outliers.csv", show_col_types = FALSE)
+memory.limit(size=70000)
 ```
 
-
 ```{r}
+conditions_wide_data <- read.csv("./data/combined_data_without_outliers.csv")
+```
+
+# keep only conditions with more than 1000 animals
+We will keep the animal and it will seem like it doesn't have any conditions I can say that it doesn't have any of the common conditions
+```{r}
+
 colnames(conditions_wide_data)
+conditions_columns <- c(colnames(conditions_wide_data[21:93]))
+conditions_columns
+conditions_sums <- colSums(conditions_wide_data[, conditions_columns])
+filter_rare_conditions_columns <- conditions_columns[conditions_sums < 1000]
+filter_rare_conditions_columns
+
+```
+keep only those columns
+
+```{r}
+filtered_rare_conditions <- select(conditions_wide_data, -c(filter_rare_conditions_columns))
+
+filtered_rare_conditions
+
 ```
 
-I will use the conditions wide data to split the data set into 3 parts 60% training set, 20% validation set and 20% test set.
+If I want to delete those rows where the animal has only rare conditions
+```{r}
+colnames(filtered_rare_conditions)
+animals_only_rare_conditions <- rowSums(filtered_rare_conditions[, 21:48]) ==0
+sum(animals_only_rare_conditions)
+animals_only_rare_conditions
+keep <- c(!animals_only_rare_conditions)
+```
+I will delete 1462 entries where the animals don't have any of the common conditions
+
+```{r}
+condition_filtered_data <- filtered_rare_conditions[keep, ]
+condition_filtered_data
+total_animals <- as.numeric(nrow(condition_filtered_data))
+```
+
+# Now I will delete those rows that the animals belong to a rare breed 
+
+```{r}
+N <- 8
+top_breeds <- condition_filtered_data %>%
+  count(Breed, sort=TRUE) %>%
+  top_n(N, n) %>%
+  pull(Breed)
+
+
+filtered_condition_breeds <- condition_filtered_data %>%
+  filter(Breed %in% top_breeds)
+
+nrow(filtered_condition_breeds)/total_animals * 100
+```
+Top 8 breeds account for the 91.50% of the animals
+We will keep only those
+171019 rows were removed this is the 8.5% of our condition_filtered_dataset
+```{r}
+(nrow(condition_filtered_data)-nrow(filtered_condition_breeds)) / total_animals *100
+```
+
+delete column that I will not use in modelling
+these are: first index column, year, month, animal_is, Dob, Dod, days_alive and years_alive
+We will keep the animal Id until the end of our data preparation
+```{r}
+colnames(filtered_condition_breeds)
+filtered_condition_breeds <- filtered_condition_breeds[, -c(1,3,4,6,10,11,16,18)]
+filtered_condition_breeds
+```
+
+
+
+```{r}
+hist(filtered_condition_breeds$T_2M)
+summary(filtered_condition_breeds$T_2M)
+
+```
+
+
+```{r}
+hist(filtered_condition_breeds$RH2M)
+summary(filtered_condition_breeds$RH2M)
+```
+
+
+
+scale 0 to 1 the numeric variables: Total_conditions_per_animal, T_2M and RH2M
+```{r}
+colnames(filtered_condition_breeds)
+scale_0_1<- function(x){
+  z <- (x-min(x))/ (max(x)-min(x))
+  return(z)
+}
+
+filtered_condition_breeds[11:12] <- apply(filtered_condition_breeds[11:12], 2, scale_0_1)
+filtered_condition_breeds[8] <- apply(filtered_condition_breeds[8], 2, scale_0_1)
+summary(filtered_condition_breeds)
+
+```
+
+One hot encoding for the categorical variables
+Create dummy variables for all categorical
+```{r}
+# Dvo_Code
+trsf <- filtered_condition_breeds %>%
+  mutate(Dvo_Code_present = 1) %>%
+  pivot_wider(names_from = Dvo_Code, values_from = Dvo_Code_present, values_fill = list(Dvo_Code_present = 0))
+#Abbatoir
+trsf <- trsf %>%
+  mutate(abbatoir_present = 1) %>%
+  pivot_wider(names_from = Abbatoir, values_from = abbatoir_present, values_fill = list(abbatoir_present = 0))
+# Breed
+trsf <- trsf %>%
+  mutate(breed_present = 1) %>%
+  pivot_wider(names_from = Breed, values_from = breed_present, values_fill = list(breed_present = 0))
+# Sex
+trsf <- trsf %>%
+  mutate(sex_present = 1) %>%
+  pivot_wider(names_from = Sex, values_from = sex_present, values_fill = list(sex_present = 0))
+# Abattoir_.Died_on_Farm
+trsf <- trsf %>%
+  mutate(place_of_death_present = 1) %>%
+  pivot_wider(names_from = Abattoir_._Died_on_Farm, values_from = place_of_death_present, values_fill = list(place_of_death_present = 0))
+
+trsf
+
+```
+
+
+```{r}
+colnames(trsf)
+```
+
+
+# separate dataset into beef and dairy
+```{r}
+beef_data <- trsf %>%
+  filter(Beef_or_Dairy=="Beef")
+
+dairy_data <- trsf %>%
+  filter(Beef_or_Dairy == "Dairy")
+```
+
+```{r}
+nrow(beef_data) + nrow(dairy_data)
+
+```
+
+We will delete the columns that are of no use. These are: animal_id, Beef_or_dairy
+```{r}
+
+beef_data <- beef_data[, -c(1,2)]
+dairy_data <- dairy_data[, -c(1,2)]
+```
+
+```{r}
+colnames(beef_data)[72] <- "died_on_farm" 
+colnames(beef_data)[71] <- "died_on_abattoir" 
+```
+
+
+```{r}
+colnames(dairy_data)[72] <- "died_on_farm" 
+colnames(dairy_data)[71] <- "died_on_abattoir" 
+```
+
+```{r}
+write.csv(beef_data, "./data/beef_data.csv", row.names = FALSE)
+write.csv(dairy_data, "./data/dairy_data.csv", row.names = FALSE)
+```
+
+
+we will split each data set into 3 parts 60% training set, 20% validation set and 20% test set.
 the analysis will be performed for months_alive
-First I will delete the columns that are of no use. These are: first index column, animal_id, Dob, Dod, days_alive, years_alive
-```{r}
 
-data <- conditions_wide_data[, -c(1, 10, 11, 16, 18)]
+```{r}
+head(beef_data)
+head(dairy_data)
 ```
 
 
-```{r}
-data
-```
-
-
-Split the dataset into training and test set
+Split the beef dataset into training and test set
 ```{r}
 set.seed(123)
-indeces_intrain <-createDataPartition(y=data$months_alive, p=0.6, list=FALSE)
+indeces_intrain_beef <-createDataPartition(y=beef_data$months_alive, p=0.6, list=FALSE)
 
-training_data <- data[indeces_intrain, ]
-testing_data <-data[-indeces_intrain, ]
+beef_training_data <- beef_data[indeces_intrain_beef, ]
+beef_testing_data <-beef_data[-indeces_intrain_beef, ]
 
-nrow(training_data) + nrow(testing_data)
-print(paste("observations in training set:", nrow(training_data)))
-print(paste("observations in test set:", nrow(testing_data)))
+nrow(beef_training_data) + nrow(beef_testing_data)
+print(paste("observations in beef training set:", nrow(beef_training_data)))
+print(paste("observations in beef test set:", nrow(beef_testing_data)))
 ```
 
-Further split the test set into half for test and half for validation set
+Split the dairy dataset into training and test set
+```{r}
+
+set.seed(123)
+indeces_intrain_dairy <-createDataPartition(y=dairy_data$months_alive, p=0.6, list=FALSE)
+
+dairy_training_data <- dairy_data[indeces_intrain_dairy, ]
+dairy_testing_data <-dairy_data[-indeces_intrain_dairy, ]
+
+nrow(dairy_training_data) + nrow(dairy_testing_data)
+print(paste("observations in dairy training set:", nrow(dairy_training_data)))
+print(paste("observations in dairy test set:", nrow(dairy_testing_data)))
+
+```
+
+
+Further split the beef test set into half for test and half for validation set
+
 ```{r}
 set.seed(123)
-val_ind <-createDataPartition(y=testing_data$months_alive, p=0.5, list=FALSE)
-test_data <- testing_data[val_ind, ]
-validation_data <-testing_data[-val_ind, ]
+beef_val_ind <-createDataPartition(y=beef_testing_data$months_alive, p=0.5, list=FALSE)
+beef_test_data <- beef_testing_data[beef_val_ind, ]
+beef_validation_data <-beef_testing_data[-beef_val_ind, ]
 
-nrow(test_data) + nrow(validation_data)
-print(paste("observations in validation set:", nrow(validation_data)))
-print(paste("observations in test set:", nrow(test_data)))
+nrow(beef_test_data) + nrow(beef_validation_data)
+print(paste("observations in validation set:", nrow(beef_validation_data)))
+print(paste("observations in test set:", nrow(beef_test_data)))
 ```
+
+Dairy
+```{r}
+set.seed(123)
+dairy_val_ind <-createDataPartition(y=dairy_testing_data$months_alive, p=0.5, list=FALSE)
+dairy_test_data <- dairy_testing_data[dairy_val_ind, ]
+dairy_validation_data <-dairy_testing_data[-dairy_val_ind, ]
+
+nrow(dairy_test_data) + nrow(dairy_validation_data)
+print(paste("observations in validation set:", nrow(dairy_validation_data)))
+print(paste("observations in test set:", nrow(dairy_test_data)))
+```
+
+
 
 check sets:
+beef
 ```{r}
-nrow(training_data) + nrow(validation_data) + nrow(test_data)
+nrow(beef_training_data) + nrow(beef_validation_data) + nrow(beef_test_data)
 
 ```
 
+dairy
+```{r}
+nrow(dairy_training_data) + nrow(dairy_validation_data) + nrow(dairy_test_data)
 
-
+```
 
 save datasets in csv files
 ```{r}
-write.csv(training_data, "./data/training_data.csv", row.names = FALSE)
-write.csv(validation_data, "./data/validation_data.csv", row.names = FALSE)
-write.csv(testing_data, "./data/test_data.csv", row.names = FALSE)
+write.csv(beef_training_data, "./data/beef_training_data.csv", row.names = FALSE)
+write.csv(beef_validation_data, "./data/beef_validation_data.csv", row.names = FALSE)
+write.csv(beef_testing_data, "./data/beef_test_data.csv", row.names = FALSE)
 ```
 
 
+```{r}
+write.csv(dairy_training_data, "./data/dairy_training_data.csv", row.names = FALSE)
+write.csv(dairy_validation_data, "./data/dairyf_validation_data.csv", row.names = FALSE)
+write.csv(dairy_testing_data, "./data/dairy_test_data.csv", row.names = FALSE)
+```
 
