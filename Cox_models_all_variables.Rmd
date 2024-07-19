@@ -17,8 +17,9 @@ library(survminer)
 load dairy datasets
 ```{r}
 train_data <- read_csv("./data/dairy_training_data.csv", show_col_types = FALSE)
-validation_data <- read_csv("./data/dairyf_validation_data.csv", show_col_types = FALSE)
+validation_data <- read_csv("./data/dairy_validation_data.csv", show_col_types = FALSE)
 ```
+
 
 
 ```{r}
@@ -27,11 +28,6 @@ variables
 #variables[-c(11, 12)]
 ```
 
-Change type of data factor
-```{r}
-train_data[,c("Dvo_Code", "Year", "Month",  "Herd_Id", "Abbatoir", "Breed", "Sex", "Abattoir_._Died_on_Farm")] =
-  lapply(train_data[,c("Dvo_Code", "Year", "Month",  "Herd_Id", "Abbatoir", "Breed", "Sex", "Abattoir_._Died_on_Farm")], function(x) as.factor(x))
-```
 
 
 smaller data set to see if it works for all variables
@@ -45,10 +41,7 @@ survival_object <- sapply(variables, function(x) as.formula(paste("Surv(months_a
 survival_object
 ```
 
-```{r}
-cox_model <- coxph(Surv(months_alive, status) ~ FASCIOLIASIS + FLUKE.DAMAGE + TB + FACTORY.DAMAGE + No + EMACIATION + TB.GENERALISED, data = train_data )
-summary(cox_model)
-```
+
 Create cox model for each variable
 ```{r}
 cox_model <- lapply(survival_object, function(x){coxph(x, data=train_data1)})

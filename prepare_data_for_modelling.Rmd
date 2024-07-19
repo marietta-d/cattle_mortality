@@ -30,7 +30,6 @@ conditions_wide_data <- read.csv("./data/combined_data_without_outliers.csv")
 # keep only conditions with more than 1000 animals
 We will keep the animal and it will seem like it doesn't have any conditions I can say that it doesn't have any of the common conditions
 ```{r}
-
 colnames(conditions_wide_data)
 conditions_columns <- c(colnames(conditions_wide_data[21:93]))
 conditions_columns
@@ -43,9 +42,7 @@ keep only those columns
 
 ```{r}
 filtered_rare_conditions <- select(conditions_wide_data, -c(filter_rare_conditions_columns))
-
 filtered_rare_conditions
-
 ```
 
 If I want to delete those rows where the animal has only rare conditions
@@ -132,10 +129,32 @@ Create dummy variables for all categorical
 trsf <- filtered_condition_breeds %>%
   mutate(Dvo_Code_present = 1) %>%
   pivot_wider(names_from = Dvo_Code, values_from = Dvo_Code_present, values_fill = list(Dvo_Code_present = 0))
+
+colnames(trsf)[48] <- "NtArds"
+colnames(trsf)
+```
+
+Here we prepend the string "ab_" to all abattoir codes so that when we apply one hot encodings later we get legit variable names
+```{r}
 #Abbatoir
+prepend_abattoir = function(x, output){
+  current_ab <- x[2]
+  return(gsub(" ", "", paste("ab_", str_trim(current_ab), sep = "")))
+}
+
+modified_values <- apply(trsf, 1, prepend_abattoir)
+trsf <- cbind(trsf, AbattoirFixed = modified_values)
+head(trsf)
+```
+
+```{r}
 trsf <- trsf %>%
   mutate(abbatoir_present = 1) %>%
-  pivot_wider(names_from = Abbatoir, values_from = abbatoir_present, values_fill = list(abbatoir_present = 0))
+  pivot_wider(names_from = AbattoirFixed, values_from = abbatoir_present, values_fill = list(abbatoir_present = 0))
+colnames(trsf)
+```
+
+```{r}
 # Breed
 trsf <- trsf %>%
   mutate(breed_present = 1) %>%
@@ -176,15 +195,14 @@ nrow(beef_data) + nrow(dairy_data)
 We will delete the columns that are of no use. These are: animal_id, Beef_or_dairy
 ```{r}
 
-beef_data <- beef_data[, -c(1,2)]
-dairy_data <- dairy_data[, -c(1,2)]
+beef_data <- beef_data[, -c(1,2,3)]
+dairy_data <- dairy_data[, -c(1,2,3)]
 ```
 
 ```{r}
 colnames(beef_data)[72] <- "died_on_farm" 
 colnames(beef_data)[71] <- "died_on_abattoir" 
 ```
-
 
 ```{r}
 colnames(dairy_data)[72] <- "died_on_farm" 
@@ -285,7 +303,7 @@ write.csv(beef_testing_data, "./data/beef_test_data.csv", row.names = FALSE)
 
 ```{r}
 write.csv(dairy_training_data, "./data/dairy_training_data.csv", row.names = FALSE)
-write.csv(dairy_validation_data, "./data/dairyf_validation_data.csv", row.names = FALSE)
+write.csv(dairy_validation_data, "./data/dairy_validation_data.csv", row.names = FALSE)
 write.csv(dairy_testing_data, "./data/dairy_test_data.csv", row.names = FALSE)
 ```
 
