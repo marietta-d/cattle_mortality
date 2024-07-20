@@ -24,27 +24,46 @@ library(actuar)
 ```
 
 
+
 ```{r}
-unique(survival_data_without_outliers$months_alive)
-survival_data_without_outliers[survival_data_without_outliers$months_alive==0, ]
-new_df_fit_distr <- survival_data_without_outliers %>%
-  mutate(months_alive = ifelse(months_alive == 0, -10000, months_alive))
-new_df_fit_distr <- new_df_fit_distr %>%
-  mutate(months_alive = ifelse(months_alive == 1, 1.1, months_alive))
-summary(new_df_fit_distr)
+data <- read.csv("./data/filtered_conditions_breeds.csv")
 ```
 
 
+delete rows were the days alive is 0
 ```{r}
-baseline_survival_months <- survfit(Surv(months_alive, status) ~ 1, data = new_df_fit_distr)
-summary(baseline_survival_months$surv)
-log_log_s <- log(-log(baseline_survival_months$surv))
-log_t <- log(baseline_survival_months$time)
-log_log_s
-log_t
+excluded_days <- data$days_alive <=1
+excluded_days
+data_excluded_days <- data[!excluded_days, ]
+summary(data_excluded_days$days_alive)
+
+```
+
+Fit a linear model in the Kaplan-Meier survival estimates after we transform them(log(-log)) to conform with the equations of Weibull distribution.
+```{r}
+baseline_survival_days <- survfit(Surv(days_alive, status) ~ 1, data = data_excluded_days)
+baseline_survival_days
+summary(baseline_survival_days$surv)
+surv <- baseline_survival_days$surv
+summary(surv)
+exclude_surv0 <- as.numeric(which(surv<1e-12))
+surv[exclude_surv0]
+new_surv <- surv[-exclude_surv0]
+summary(new_surv)
+time <-baseline_survival_days$time 
+summary(time)
+new_time <- time[-exclude_surv0]
+summary(new_time)
+
+
+log_log_s <- log(-log(new_surv))
+log_t <- log(new_time)
+
 summary(log_log_s)
-baseline_survival_months_lm <- lm(log_log_s ~ log_t)
-baseline_survival_months_lm %>%
+summary(log_t)
+
+baseline_survival_days_lm <- lm(log_log_s ~ log_t)
+baseline_survival_days_lm %>%
   broom::augment() %>%
   ggplot(aes(x = log_t)) +
   geom_point(aes(y = log_log_s)) +
@@ -54,43 +73,30 @@ baseline_survival_months_lm %>%
 
 
 ```{r}
-x <- survival_data_without_outliers$months_alive
-```
-
-```{r}
-descdist(data=x, discrete=FALSE)
-```
-
-```{r}
-library(stats)
-normal_fit <- fitdist(x, "norm")
-weibull_fit <- fitdist(x, "weibull", lower = c(0, 0), start = list(scale = 1, shape = 1), control=list(trace=1, REPORT=1))
-exp_fit <- fitdist(x, "exp")
-
+coef(baseline_survival_days_lm)
 ```
 
 
-```{r}
-gamma_fit <- fitdist(x, "gamma", lower = c(0, 0), start = list(scale = 1, shape = 1), control=list(trace=1, REPORT=1))
-```
-
-```{r}
-plot(normal_fit)
-```
-
-```{r}
-plot(gamma_fit)
-```
 
 
-```{r}
-plot(exp_fit)
-```
 
 
-```{r}
-plot(weibull_fit)
-```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

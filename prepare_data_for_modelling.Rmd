@@ -41,6 +41,7 @@ filter_rare_conditions_columns
 keep only those columns
 
 ```{r}
+conditions_wide_data
 filtered_rare_conditions <- select(conditions_wide_data, -c(filter_rare_conditions_columns))
 filtered_rare_conditions
 ```
@@ -82,6 +83,13 @@ We will keep only those
 ```{r}
 (nrow(condition_filtered_data)-nrow(filtered_condition_breeds)) / total_animals *100
 ```
+
+
+save dataset in a csv_file to use it for parametric distributions
+```{r}
+write.csv(filtered_condition_breeds, "./data/filtered_conditions_breeds.csv", row.names = FALSE)
+```
+
 
 delete column that I will not use in modelling
 these are: first index column, year, month, animal_is, Dob, Dod, days_alive and years_alive

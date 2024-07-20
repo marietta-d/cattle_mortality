@@ -1,0 +1,79 @@
+---
+title: "fit_distributions_on_data"
+author: "Marietta_Dalamanga"
+date: "2024-07-20"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(ggpubr)
+library(fitdistrplus)
+library(logspline)
+library(fitur)
+library(actuar)
+library(stats)
+```
+
+
+
+
+```{r}
+data <- read.csv("./data/filtered_conditions_breeds.csv")
+```
+
+
+
+```{r}
+days_alive <- data$days_alive
+```
+
+```{r}
+descdist(data=days_alive, discrete=FALSE)
+```
+
+```{r}
+
+normal_fit <- fitdist(days_alive, "norm")
+weibull_fit <- fitdist(days_alive, "weibull", lower = c(0, 0), start = list(scale = 1, shape = 1), control=list(trace=1, REPORT=1))
+
+
+```
+
+
+```{r}
+# NOTE: This doesn't run!
+exp_fit <- fitdist(days_alive[1:100], "exp")
+```
+
+
+
+```{r}
+gamma_fit <- fitdist(days_alive, "gamma", lower = c(0, 0), start = list(scale = 1, shape = 1), control=list(trace=1, REPORT=1))
+```
+
+
+```{r}
+plot(normal_fit)
+```
+
+
+```{r}
+plot(weibull_fit)
+```
+
+
+```{r}
+plot(exp_fit)
+```
+
+
+```{r}
+plot(gamma_fit)
+```
+
+
+
