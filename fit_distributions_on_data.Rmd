@@ -36,11 +36,8 @@ descdist(data=days_alive, discrete=FALSE)
 ```
 
 ```{r}
-
 normal_fit <- fitdist(days_alive, "norm")
 weibull_fit <- fitdist(days_alive, "weibull", lower = c(0, 0), start = list(scale = 1, shape = 1), control=list(trace=1, REPORT=1))
-
-
 ```
 
 
@@ -52,7 +49,7 @@ exp_fit <- fitdist(days_alive[1:100], "exp")
 
 
 ```{r}
-gamma_fit <- fitdist(days_alive, "gamma", lower = c(0, 0), start = list(scale = 1, shape = 1), control=list(trace=1, REPORT=1))
+gamma_fit <- fitdist(days_alive[1:10000], "gamma", lower = c(0, 0), start = list(scale = 1, shape = 1), control=list(trace=1, REPORT=1))
 ```
 
 
