@@ -73,13 +73,12 @@ get_results <- lapply(cox_model, function(x){
   })
 ```
 
-
-
 ```{r}
 results_for_all <- t(as.data.frame(get_results, check.names = FALSE))
 results_for_all <- as.data.frame(results_for_all)
 results_for_all
 ```
+
 
 
 
