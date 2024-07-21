@@ -34,14 +34,12 @@ dairy_data <- read.csv("./data/dairy_data.csv")
 We will perform log rank tests for all variables for survival in months in beef data
 
 ```{r}
-
-variables <- colnames(beef_data)
+variables <- colnames(dairy_data)
 variables
 ```
 
 log-rank test for herd id
 ```{r}
-
 log_rank_months_herdid <- survdiff(Surv(time = beef_data$months_alive, event = beef_data$status) ~ as.factor(beef_data$Herd_Id), data=beef_data)
 print(log_rank_months_herdid)
 ```
@@ -103,7 +101,6 @@ print(log_rank_months_total_conditions_more_than_9_vs_all_other)
 We will perform log rank tests for all variables for survival in months
 
 ```{r}
-
 variables <- colnames(dairy_data)
 variables
 ```
@@ -112,8 +109,9 @@ log-rank test for each condition
 ```{r}
 variables <- colnames(dairy_data)
 
-for(i in 14:41){
+for(i in 72){
   variable_name <- variables[i]
+  print(variable_name)
   log_rank_months <- survdiff(Surv(time = dairy_data$months_alive, event = dairy_data$status) ~ as.factor(dairy_data[[variable_name]]), data=dairy_data)
   print(log_rank_months)
 }
