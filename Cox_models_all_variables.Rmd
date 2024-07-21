@@ -13,6 +13,17 @@ knitr::opts_chunk$set(echo = TRUE)
 library(survival)
 library(survminer)
 library(pec)
+library(tidyverse)
+library(dplyr)
+library(visdat)
+library(splitstackshape)
+library(tidyr)
+library(survminer)
+library(data.table)
+library(ggplot2)
+library(lubridate)
+library(scales)
+library("ggpubr")
 ```
 
 load dairy datasets
@@ -39,7 +50,6 @@ survival_object <- sapply(variables, function(x) as.formula(paste("Surv(months_a
 
 Create cox model for each variable
 ```{r}
-
 cox_model <- lapply(survival_object, function(x){coxph(x, data=train_data)})
 cox_model[41]
 ```
@@ -154,6 +164,14 @@ selectedSupermodel
 
 
 
+
+```{r}
+simple_cox <- coxph(Surv(train_data$months_alive, train_data$status) ~ F + TB, data=train_data)
+simple_cox_train <- survfit(simple_cox, data=train_data)
+ggsurvplot(simple_cox_train, ggtheme = theme_minimal()) 
+```
+
+
 ```{r}
 fit_superCox <- coxph(Surv(train_data$months_alive, train_data$status) ~ Total_Conditions_per_Animal + T_2M + RH2M + TB + FACTORY.DAMAGE + 
 FASCIOLIASIS + PLEURISY + NAD + INJECTION.SITES + ABSCESS.PYAEMIA + CONTAMINATION + ACTINO + BRUISING + TELANGECTASIS + PETECHAE.HAEMORRHAGES + 
@@ -164,11 +182,20 @@ EMACIATION + Armagh + Ballymena + Coleraine + Dungannon + Enniskillen + LondonDe
 fit_superCox
 ```
 
-visualise the selectedsupermodel
+visualise the selected supermodel
 ```{r}
 super_cox_train <- survfit(fit_superCox, data=train_data)
+super_cox_train
+ggsurvplot(super_cox_train, ggtheme = theme_minimal(), variable="TB")
+```
 
-ggsurvplot(super_cox_train, ggtheme = theme_minimal())
+```{r}
+fit_superCox
+survival <- data.frame(survival = seq(.01, .99, by = .01))
+survival
+super_cox_predictions <- data.frame(survival = survival,
+                                    predictions = predict(fit_superCox, survival))
+
 ```
 
 
@@ -202,79 +229,53 @@ ggsurvplot(survfit(fit_superCox, data=validation_data), ggtheme = theme_minimal(
 ```
 
 
-```{r}
-library(prodlim)
-library(lava)
-library(riskRegression)
-library(survival)
-
-```
-
-
-
-
 
 ```{r}
-# survival
-dlearn <- SimSurv(40)
-dval <- SimSurv(100)
+new_dat <- expand.grid(
+  M = c("Other", "Male"), 
+  survival = seq(.01, .99, by = .02)
+  ) 
 
-f <- coxph(Surv(time,status)~X1+X2,data=dlearn,x=TRUE,y=TRUE)
+new_dat <- new_dat %>%
+  mutate(
+    pred = map2(M, survival, 
+                ~predict(wb_fit, type = "quantile", p = 1 - .y, se = TRUE, 
+                         newdata = data.frame(M = .x))),
+    t = map_dbl(pred, ~pluck(.x, "fit")),
+    se = map_dbl(pred, ~pluck(.x, "se.fit")),
+    ucl = t + 1.96 * se,
+    lcl = t - 1.96 * se
+  )
 
-cf=calPlot(f,time=3,data=dval)
-print(cf)
-plot(cf)
-```
 
-```{r}
 
-g <- coxph(Surv(time,status)~X2,data=dlearn,x=TRUE,y=TRUE)
-cf2=calPlot(list("Cox regression X1+X2"=f,"Cox regression X2"=g),
-time=3,
-type="risk",
-data=dval)
-print(cf2)
-
-plot(cf2)
-calPlot(f,time=3,data=dval,type="survival")
-calPlot(f,time=3,data=dval,bars=TRUE,pseudo=FALSE)
-calPlot(f,time=3,data=dval,bars=TRUE,type="risk",pseudo=FALSE)
-## show a red line which follows the hanging bars
-calPlot(f,time=3,data=dval,bars=TRUE,hanging=TRUE)
-a <- calPlot(f,time=3,data=dval,bars=TRUE,hanging=TRUE,abline.col=NULL)
-lines(c(0,1,ceiling(a$xcoord)),
-c(a$offset[1],a$offset,a$offset[length(a$offset)]),
-col=2,lwd=5,type="s")
-calPlot(f,time=3,data=dval,bars=TRUE,type="risk",hanging=TRUE)
-set.seed(13)
-m <- crModel()
-regression(m, from = "X1", to = "eventtime1") <- 1
-regression(m, from = "X2", to = "eventtime1") <- 1
-m <- addvar(m,c("X3","X4","X5"))
-distribution(m, "X1") <- binomial.lvm()
-distribution(m, "X4") <- binomial.lvm()
-d1 <- sim(m,100)
-d2 <- sim(m,100)
-csc <- CSC(Hist(time,event)~X1+X2+X3+X4+X5,data=d1)
-fgr <- FGR(Hist(time,event)~X1+X2+X3+X4+X5,data=d1,cause=1)
-if ((requireNamespace("cmprsk",quietly=TRUE))){
-predict.crr <- cmprsk:::predict.crr
-cf3=calPlot(list("Cause-specific Cox"=csc,"Fine-Gray"=fgr),
-time=5,
-legend.x=-0.3,
-legend.y=1.35,
-ylab="Observed event status",
-legend.legend=c("Cause-specific Cox regression","Fine-Gray regression"),
-legend.xpd=NA)
-print(cf3)
-plot(cf3)
-b1 <- calPlot(list("Fine-Gray"=fgr),time=5,bars=TRUE,hanging=FALSE)
-print(b1)
-plot(b1)
-calPlot(fgr,time=5,bars=TRUE,hanging=TRUE)
+prcnt_lived_at_least <- function(x, isMale=1) {
+  num_sex <- (validation_data %>% count(M==isMale))[2, 2] 
+  prcnt_lived_at_least_x <- (validation_data %>% count(months_alive >= x & M==isMale))[2, 2] / num_sex
+  return (prcnt_lived_at_least_x)
 }
+
+
+n_rows_new_dat <- nrow(new_dat)
+empirical_survival <- c()
+
+for (i in 1:n_rows_new_dat) {
+  isThisMalei <- new_dat$M[i]
+  ti <- new_dat$t[i]
+  empSurvi <- prcnt_lived_at_least(ti, isThisMalei=="Male")
+  empirical_survival <- append(empirical_survival, empSurvi)
+}
+
+new_dat$empirical_surv <- empirical_survival
 ```
 
+###########
 
+```{r}
+new_dat %>%
+  ggplot(aes(x = t, y=survival, color = M)) + geom_line(linetype="dashed") + 
+  geom_line(aes(y = empirical_surv, color = M)) +
+  theme_light()
+```
 
 

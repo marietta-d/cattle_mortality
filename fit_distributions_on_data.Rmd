@@ -43,7 +43,7 @@ weibull_fit <- fitdist(days_alive, "weibull", lower = c(0, 0), start = list(scal
 
 ```{r}
 # NOTE: This doesn't run!
-exp_fit <- fitdist(days_alive[1:100], "exp")
+exp_fit <- fitdist(days_alive, "exp")
 ```
 
 

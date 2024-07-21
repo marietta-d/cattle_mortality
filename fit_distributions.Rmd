@@ -33,7 +33,6 @@ data <- read.csv("./data/filtered_conditions_breeds.csv")
 delete rows were the days alive is 0
 ```{r}
 excluded_days <- data$days_alive <=1
-excluded_days
 data_excluded_days <- data[!excluded_days, ]
 summary(data_excluded_days$days_alive)
 
@@ -76,7 +75,7 @@ baseline_survival_days_lm %>%
 coef(baseline_survival_days_lm)
 ```
 
-
+fit distributions in dairy cattles
 ```{r}
 train_dairy <- read.csv("./data/dairy_training_data.csv")
 ```
@@ -84,163 +83,29 @@ train_dairy <- read.csv("./data/dairy_training_data.csv")
 ```{r}
 
 excluded_months <- train_dairy$months_alive <=1
-excluded_months
 train_dairy_exclude_months<- train_dairy[!excluded_months, ]
 summary(train_dairy_exclude_months$months_alive)
 
 ```
 
 
-
-
-```{r}
-#n_rows_dataset <- nrow(train_dairy_exclude_months)
-#n_samples <- 300000
-#idx_seq <- seq(1, n_rows_dataset, by = 1)
-#rnd_idx <- sample(1:n_rows_dataset,n_samples, replace=F)
-#train_dairy_exclude_months_few <- train_dairy_exclude_months[rnd_idx,]
-
-
-survival_object <- Surv(train_dairy_exclude_months$months_alive, train_dairy_exclude_months$status)
-wb_fit <- survreg(survival_object ~ M, data = train_dairy_exclude_months, dist = "weibull")
-summary(wb_fit)
-```
-
-
 ```{r}
 validation_data <- read.csv("./data/dairy_validation_data.csv")
-
-new_dat <- expand.grid(
-  M = c("Other", "Male"), 
-  survival = seq(.01, .99, by = .02)
-  ) 
-
-new_dat <- new_dat %>%
-  mutate(
-    pred = map2(M, survival, 
-                ~predict(wb_fit, type = "quantile", p = 1 - .y, se = TRUE, 
-                         newdata = data.frame(M = .x))),
-    t = map_dbl(pred, ~pluck(.x, "fit")),
-    se = map_dbl(pred, ~pluck(.x, "se.fit")),
-    ucl = t + 1.96 * se,
-    lcl = t - 1.96 * se
-  )
-
-
-
-prcnt_lived_at_least <- function(x, isMale=1) {
-  num_sex <- (validation_data %>% count(M==isMale))[2, 2] 
-  prcnt_lived_at_least_x <- (validation_data %>% count(months_alive >= x & M==isMale))[2, 2] / num_sex
-  return (prcnt_lived_at_least_x)
-}
-
-
-n_rows_new_dat <- nrow(new_dat)
-empirical_survival <- c()
-
-for (i in 1:n_rows_new_dat) {
-  isThisMalei <- new_dat$M[i]
-  ti <- new_dat$t[i]
-  empSurvi <- prcnt_lived_at_least(ti, isThisMalei=="Male")
-  empirical_survival <- append(empirical_survival, empSurvi)
-}
-
-new_dat$empirical_surv <- empirical_survival
 ```
 
 
 
-```{r}
-new_dat %>%
-  ggplot(aes(x = t, y=survival, color = M)) + geom_line(linetype="dashed") + 
-  geom_line(aes(y = empirical_surv, color = M)) +
-  theme_light()
-```
-
-gamma distribution
-
-```{r}
-#n_rows_dataset <- nrow(train_dairy_exclude_months)
-#n_samples <- 300000
-#idx_seq <- seq(1, n_rows_dataset, by = 1)
-#rnd_idx <- sample(1:n_rows_dataset,n_samples, replace=F)
-#train_dairy_exclude_months_few <- train_dairy_exclude_months[rnd_idx,]
-
-
-survival_object <- Surv(train_dairy_exclude_months$months_alive, train_dairy_exclude_months$status)
-exp_fit <- survreg(survival_object ~ M, data = train_dairy_exclude_months, dist = "exponential")
-summary(exp_fit)
-```
-
-
-```{r}
-
-new_dat <- expand.grid(
-  M = c("Other", "Male"), 
-  survival = seq(.01, .99, by = .02)
-  ) 
-
-new_dat <- new_dat %>%
-  mutate(
-    pred = map2(M, survival, 
-                ~predict(exp_fit, type = "quantile", p = 1 - .y, se = TRUE, 
-                         newdata = data.frame(M = .x))),
-    t = map_dbl(pred, ~pluck(.x, "fit")),
-    se = map_dbl(pred, ~pluck(.x, "se.fit")),
-    ucl = t + 1.96 * se,
-    lcl = t - 1.96 * se
-  )
-
-
-
-prcnt_lived_at_least <- function(x, isMale=1) {
-  num_sex <- (validation_data %>% count(M==isMale))[2, 2] 
-  prcnt_lived_at_least_x <- (validation_data %>% count(months_alive >= x & M==isMale))[2, 2] / num_sex
-  return (prcnt_lived_at_least_x)
-}
-
-
-n_rows_new_dat <- nrow(new_dat)
-empirical_survival <- c()
-
-for (i in 1:n_rows_new_dat) {
-  isThisMalei <- new_dat$M[i]
-  ti <- new_dat$t[i]
-  empSurvi <- prcnt_lived_at_least(ti, isThisMalei=="Male")
-  empirical_survival <- append(empirical_survival, empSurvi)
-}
-
-new_dat$empirical_surv <- empirical_survival
-```
-
-
-
-```{r}
-new_dat %>%
-  ggplot(aes(x = t, y=survival, color = M)) + geom_line(linetype="dashed") + 
-  geom_line(aes(y = empirical_surv, color = M)) +
-  theme_light()
-```
-
-
-fit weibull for all categorical variables
 
 ```{r}
 variables <- variable.names(train_dairy)
 variables <- variables[-c(2:5)]
 variables
-
-all_survival_object <- sapply(variables, function(x) as.formula(paste("Surv(months_alive, status) ~", x)))
-
-wb_fit_all <- lapply(survival_object, function(x){survreg(x, data =train_dairy_exclude_months, dist="weibull")})
-summary(wb_fit_all)
 ```
 
-
+fit weibull for all categorical variables
 ```{r}
-wb_fit <- 0
 survival_object <- Surv(train_dairy_exclude_months$months_alive, train_dairy_exclude_months$status)
-for (var_name in variables[2:15]) {
+for (var_name in variables[2:68]) {
   cmd <- paste("wb_fit <- survreg(survival_object ~ ", var_name, ", data = train_dairy_exclude_months, dist = 'weibull')")
   eval(parse(text = cmd))
   # --ok
@@ -282,75 +147,75 @@ for (var_name in variables[2:15]) {
       "geom_line(aes(y = empirical_surv, color = ", var_name, ")) +",
       "theme_light()")))
   print(my_plt_i)
+  img_fname <- gsub(" ", "", paste("./images/weibull_fit/", var_name,".png", sep=""))
+  ggsave(img_fname, plot = my_plt_i,  width = 8, height = 6)
 }
 ```
 
 
-```{r}
 
-new_dat <- expand.grid(
-    variable_levels = c("Other", "TB"), 
-    survival = seq(.01, .99, by = .02)
-  ) %>%
-mutate(
-  pred = map2(TB, survival, 
-              ~predict(wb_fit_all[[2]], type = "quantile", p = 1 - .y, se = TRUE, 
-                       newdata = data.frame(variable_name = .x))),
-  t = map_dbl(pred, ~pluck(.x, "fit")),
-  se = map_dbl(pred, ~pluck(.x, "se.fit")),
-  ucl = t + 1.96 * se,
-  lcl = t - 1.96 * se
-)
-print(new_dat)
 
-```
 
+
+fit exponential for all categorical variables
 
 ```{r}
+survival_object <- Surv(train_dairy_exclude_months$months_alive, train_dairy_exclude_months$status)
+for (var_name in variables[2:68]) {
+  cmd <- paste("exp_fit <- survreg(survival_object ~ ", var_name, ", data = train_dairy_exclude_months, dist = 'exponential')")
+  eval(parse(text = cmd))
+
+  
+  cmd2 <- paste("new_dat <- expand.grid(", var_name, " = c('Other', '", var_name, "'),  survival = seq(.01, .99, by = .02) ) ")
+  eval(parse(text = cmd2))
+  
+  cmd3 <- paste("new_dat <- new_dat %>% mutate( pred = map2(", var_name, 
+    ", survival,  ~predict(exp_fit, type = 'quantile', p = 1 - .y, se = TRUE,  newdata = data.frame(", var_name, " = .x))),",
+    "t = map_dbl(pred, ~pluck(.x, 'fit')),",
+    "se = map_dbl(pred, ~pluck(.x, 'se.fit')),",
+    "ucl = t + 1.96 * se,",
+    "lcl = t - 1.96 * se)")
+  
+  eval(parse(text = cmd3))
 
 
+  prcnt_lived_at_least <- function(x, isActiveVariable=1) {
+    eval(parse(text=paste("num_active <- (validation_data %>% count(", var_name, "==isActiveVariable))[2, 2]")))
+    eval(parse(text=paste("prcnt_lived_at_least_x <- (validation_data %>% count(months_alive >= x & ", var_name, "==isActiveVariable))[2, 2] / num_active")))
+    return (prcnt_lived_at_least_x)
+  }
 
-prcnt_lived_at_least <- function(x, isMale=1) {
-  num_sex <- (validation_data %>% count(M==isMale))[2, 2] 
-  prcnt_lived_at_least_x <- (validation_data %>% count(months_alive >= x & M==isMale))[2, 2] / num_sex
-  return (prcnt_lived_at_least_x)
+ 
+  n_rows_new_dat <- nrow(new_dat)
+  empirical_survival <- c()
+  
+  for (i in 1:n_rows_new_dat) {
+    eval(parse(text=paste("isThisActive <- new_dat$", var_name, "[i]")))
+    ti <- new_dat$t[i]
+    empSurvi <- prcnt_lived_at_least(ti, isThisActive!="Other")
+    empirical_survival <- append(empirical_survival, empSurvi)
+  }
+  
+  new_dat$empirical_surv <- empirical_survival
+
+  eval(parse(text=paste("my_plt_i <- new_dat %>%",
+      "ggplot(aes(x = t, y=survival, color =", var_name, ")) + geom_line(linetype='dashed') + ",
+      "geom_line(aes(y = empirical_surv, color = ", var_name, ")) +",
+      "theme_light()")))
+  print(my_plt_i)
+  img_fname <- gsub(" ", "", paste("./images/exponential_fit/", var_name,".png", sep=""))
+  ggsave(img_fname, plot = my_plt_i,  width = 8, height = 6)
 }
-
-
-n_rows_new_dat <- nrow(new_dat)
-empirical_survival <- c()
-
-for (i in 1:n_rows_new_dat) {
-  isThisMalei <- new_dat$M[i]
-  ti <- new_dat$t[i]
-  empSurvi <- prcnt_lived_at_least(ti, isThisMalei=="Male")
-  empirical_survival <- append(empirical_survival, empSurvi)
-}
-
-new_dat$empirical_surv <- empirical_survival
 ```
 
-```{r}
 
 
 
 
-new_dat <- expand.grid(
-  M = c("Other", "Male"), 
-  survival = seq(.01, .99, by = .02)
-  ) 
 
-new_dat <- new_dat %>%
-  mutate(
-    pred = map2(M, survival, 
-                ~predict(exp_fit, type = "quantile", p = 1 - .y, se = TRUE, 
-                         newdata = data.frame(M = .x))),
-    t = map_dbl(pred, ~pluck(.x, "fit")),
-    se = map_dbl(pred, ~pluck(.x, "se.fit")),
-    ucl = t + 1.96 * se,
-    lcl = t - 1.96 * se
-  )
-```
+
+
+
 
 
 
