@@ -31,11 +31,6 @@ variables
 
 
 
-smaller data set to see if it works for all variables
-```{r}
-# train_data1 <- train_data[1:10, ]
-```
-
 create Survival objects for each variable
 ```{r}
 survival_object <- sapply(variables, function(x) as.formula(paste("Surv(months_alive, status) ~ ", x)))
