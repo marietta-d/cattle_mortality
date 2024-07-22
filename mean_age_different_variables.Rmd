@@ -1,0 +1,74 @@
+---
+title: "mean_life"
+author: "Marietta_Dalamanga"
+date: "2024-07-22"
+output: html_document
+---
+
+```{r}
+filtered_condition_breeds_data <- read.csv("./data/filtered_conditions_breeds.csv")
+```
+
+
+beef
+```{r}
+beef <- filtered_condition_breeds_data %>% 
+  filter(Beef_or_Dairy=="Beef")
+```
+
+dairy
+```{r}
+dairy <- filtered_condition_breeds_data %>% 
+  filter(Beef_or_Dairy=="Dairy")
+```
+
+```{r}
+colnames(dairy)
+```
+
+```{r}
+
+summary(beef$T_2M)
+temp_mean_age <- dairy %>%
+  mutate(temp_range = case_when(
+    T_2M < 10 ~ "low",
+    T_2M >= 10 & T_2M <= 15 ~ "medium (5-13)",
+    T_2M > 15 ~ "high"
+  )) %>%
+  group_by(temp_range) %>%
+  summarise(mean_age = mean(months_alive))
+temp_mean_age
+
+```
+
+
+
+```{r}
+
+dairy %>%
+  group_by(EMACIATION) %>%
+  summarise_at(vars(months_alive), funs(mean(., na.rm=TRUE)))
+```
+
+
+```{r}
+
+beef %>%
+  group_by(beef[21]) %>%
+  summarise_at(vars(months_alive), funs(mean(., na.rm=TRUE)))
+summary(dairy$months_alive)
+```
+
+
+
+
+
+```{r}
+str(beef)
+beef %>%
+  group_by(Herd_Id) %>%
+  summarise_at(vars(months_alive), funs(mean(., na.rm=TRUE))) %>%
+  summary()
+
+```
+

@@ -62,7 +62,7 @@ condition_filtered_data
 total_animals <- as.numeric(nrow(condition_filtered_data))
 ```
 
-# Now I will delete those rows that the animals belong to a rare breed 
+# Now we will delete those rows that the animals belong to a rare breed 
 
 ```{r}
 N <- 8
@@ -202,19 +202,22 @@ nrow(beef_data) + nrow(dairy_data)
 
 We will delete the columns that are of no use. These are: animal_id, Beef_or_dairy
 ```{r}
+colnames(beef_data)
+beef_data <- beef_data[, -c(1,3)]
 
-beef_data <- beef_data[, -c(1,2,3)]
-dairy_data <- dairy_data[, -c(1,2,3)]
+dairy_data <- dairy_data[, -c(1,3)]
 ```
 
 ```{r}
-colnames(beef_data)[72] <- "died_on_farm" 
-colnames(beef_data)[71] <- "died_on_abattoir" 
+colnames(beef_data)
+colnames(beef_data)[73] <- "died_on_farm" 
+colnames(beef_data)[72] <- "died_on_abattoir" 
+colnames(beef_data)
 ```
 
 ```{r}
-colnames(dairy_data)[72] <- "died_on_farm" 
-colnames(dairy_data)[71] <- "died_on_abattoir" 
+colnames(dairy_data)[73] <- "died_on_farm" 
+colnames(dairy_data)[72] <- "died_on_abattoir" 
 ```
 
 ```{r}
