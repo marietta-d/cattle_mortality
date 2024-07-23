@@ -29,6 +29,120 @@ library(actuar)
 data <- read.csv("./data/filtered_conditions_breeds.csv")
 ```
 
+```{r}
+data
+```
+
+```{r}
+survival_object <- Surv(data_excluded_days$days_alive, data_excluded_days$status)
+```
+
+```{r}
+excluded_days <- data$days_alive <=1
+data_excluded_days <- data[!excluded_days, ]
+summary(data_excluded_days$days_alive)
+
+```
+
+```{r}
+
+data_excluded_days[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy")] = 
+  lapply(data_excluded_days[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy")],
+                                function(x) as.factor(x))
+```
+
+Attempt to fit weibul for 2 categorical variables
+```{r}
+
+wb_fit1 <- survreg(survival_object ~ Dvo_Code , data=data_excluded_days, dist="weibull")
+wb_fit1
+wb_fit2 <- survreg(survival_object ~ Dvo_Code + Abbatoir, data=data_excluded_days, dist="weibull")
+wb_fit2
+wb_fit3 <- survreg(survival_object ~ Dvo_Code + Abbatoir + Breed, data=data_excluded_days, dist="weibull")
+wb_fit3
+wb_fit4 <- survreg(survival_object ~ Dvo_Code + Abbatoir + Breed + Sex, data=data_excluded_days, dist="weibull")
+wb_fit4
+wb_fit5 <- survreg(survival_object ~ Dvo_Code + Abbatoir + Breed + Sex + Abattoir_._Died_on_Farm, data=data_excluded_days, dist="weibull")
+wb_fit5
+wb_fit6 <- survreg(survival_object ~ Dvo_Code + Abbatoir + Breed + Sex + Abattoir_._Died_on_Farm + Beef_or_Dairy, data=data_excluded_days, dist="weibull")
+wb_fit6
+wb_fit7 <- survreg(survival_object ~ Dvo_Code + Abbatoir + Breed + Sex + Abattoir_._Died_on_Farm + Beef_or_Dairy, data=data_excluded_days, dist="weibull")
+wb_fit7
+```
+
+```{r}
+wb_fit$
+k=9
+wb_fit1$loglik
+AIC(wb_fit1, k=k)
+akaike1 <- 2*k - 2*(wb_fit1$loglik[2])
+akaike1
+k=2
+wb_fit2$loglik
+AIC(wb_fit1, k=k)
+akaike2 <- 2*k - 2*(wb_fit2$loglik[2])
+akaike2
+k=3
+wb_fit3$loglik
+AIC(wb_fit1, k=k)
+akaike3 <- 2*k - 2*(wb_fit3$loglik[2])
+akaike3
+k=4
+wb_fit4$loglik
+AIC(wb_fit1, k=k)
+akaike4 <- 2*k - 2*(wb_fit4$loglik[2])
+akaike4
+k=5
+wb_fit5$loglik
+AIC(wb_fit1, k=k)
+akaike5 <- 2*k - 2*(wb_fit5$loglik[2])
+akaike5
+k=6
+wb_fit6$loglik
+AIC(wb_fit1, k=k)
+akaike6 <- 2*k - 2*(wb_fit6$loglik[2])
+akaike6
+
+```
+
+```{r}
+wb_fit7 <- survreg(survival_object ~ Dvo_Code + Abbatoir + Breed + Sex + Abattoir_._Died_on_Farm + Beef_or_Dairy + T_2M, data=data_excluded_days, dist="weibull")
+wb_fit7
+wb_fit8 <- survreg(survival_object ~ Dvo_Code + Abbatoir + Breed + Sex + Abattoir_._Died_on_Farm + Beef_or_Dairy + T_2M + Total_Conditions_per_Animal, data=data_excluded_days, dist="weibull")
+wb_fit8
+wb_fit9 <- survreg(survival_object ~ Dvo_Code + Abbatoir + Breed + Sex + Abattoir_._Died_on_Farm + Beef_or_Dairy + T_2M + Total_Conditions_per_Animal + RH2M, data=data_excluded_days, dist="weibull")
+wb_fit9
+```
+
+```{r}
+wb_fit10 <- survreg(survival_object ~ Dvo_Code + Abbatoir + Breed + Sex + Abattoir_._Died_on_Farm + Beef_or_Dairy + T_2M + Total_Conditions_per_Animal + RH2M +No, data=data_excluded_days, dist="weibull")
+wb_fit10
+```
+
+```{r}
+
+```
+
+
+```{r}
+colnames(data_excluded_days)
+```
+
+create a function which will take all possible combinations of the variables
+```{r}
+library(combinat)
+# create all possible combinations from variables
+variables<-variable.names(data_excluded_days)
+variables <- variables[-c(1, 3, 4, 5, 6, 10, 11, 15, 16, 17, 18)]
+variables
+ for (k in 1:length(variables)) {
+    # Generate combinations of size k
+    combs <- combn(variables, k, simplify = FALSE)
+combs
+```
+
+
+
 
 delete rows were the days alive is 0
 ```{r}
