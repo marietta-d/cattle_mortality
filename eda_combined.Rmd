@@ -22,7 +22,7 @@ library(data.table)
 library(ggplot2)
 library(lubridate)
 library(scales)
-library("ggpubr")
+library(ggpubr)
 ```
 
 Load dataset 
@@ -33,17 +33,10 @@ head(combined_data)
 
 
 ```{r}
-combined_data <- combined_data[, -1]
 colnames(combined_data)
 str(combined_data)
 ```
 
-
-Change the type of variables
-```{r}
-combined_data[,c("Dob", "Dod")] = lapply(combined_data[,c("Dob", "Dod")],
-                                function(x) as.Date(x))
-```
 
 
 ```{r}
@@ -87,6 +80,16 @@ days_alive_histogram <-ggplot(combined_data, aes(x=days_alive)) +
   theme_minimal()
 ggsave("./data/combined_figs/days_alive_histogram.png", plot=days_alive_histogram, width = 8, height = 6 )
 days_alive_histogram
+```
+
+age in months
+```{r}
+months_alive_histogram <- ggplot(combined_data, aes(x=months_alive)) +
+  geom_histogram(binwidth=1, fill="steelblue") +
+  labs(title="Histogram of age in months", x="Months", y="Animals")+
+  theme_minimal()
+ggsave("./data/combined_figs/months_alive_histogram.png", plot=months_alive_histogram, width = 8, height = 6 )
+months_alive_histogram
 ```
 
 
@@ -274,6 +277,17 @@ combined_data_without_outliers <- combined_data[!outliers3, ]
 combined_data_without_outliers
 ```
 
+
+```{r}
+sapply(combined_data, nlevels)
+combined_data_without_outliers <- droplevels(combined_data_without_outliers)
+nlevels(combined_data_without_outliers)
+sapply(combined_data_without_outliers, nlevels)
+str(combined_data_without_outliers)
+colnames(combined_data_without_outliers)
+```
+
+
 ```{r}
 age <- c("years_alive", "days_alive", "months_alive")
 summary(combined_data_without_outliers[, age])
@@ -288,6 +302,13 @@ summary(combined_data$years_alive[combined_data$Beef_or_Dairy=="Beef"])
 summary(combined_data_without_outliers$years_alive[combined_data_without_outliers$Beef_or_Dairy=="Dairy"])
 summary(combined_data_without_outliers$years_alive[combined_data_without_outliers$Beef_or_Dairy=="Beef"])
 ```
+
+
+```{r}
+summary(combined_data_without_outliers$days_alive[combined_data_without_outliers$Beef_or_Dairy=="Dairy"])
+summary(combined_data_without_outliers$days_alive[combined_data_without_outliers$Beef_or_Dairy=="Beef"])
+```
+
 
 male animals no outliers summary
 ```{r}
@@ -334,7 +355,6 @@ be<- combined_data_without_outliers %>%
 summary(be[, age])
 
 ```
-
 
 
 ```{r}
@@ -442,16 +462,38 @@ box_plot_age_by_production
 ```
 
 
+```{r}
+age_summary <- aggregate(days_alive ~ Sex + Beef_or_Dairy , data=combined_data_without_outliers, mean)
+age_summary
+```
 
 
 ### Categorical variables
+
+
+```{r}
+Sex_summary <- combined_data_without_outliers %>%
+  group_by(Sex) %>%
+  summarise(
+    mean_age = mean(days_alive),
+    percent_of_total_animals = n() * 100/ total_animals_no_outliers,
+    percent_dairy = mean(Beef_or_Dairy == "Dairy") * 100,
+    percent_beef = mean(Beef_or_Dairy == "Beef") * 100,
+    Abattoir_deaths = 100 * sum(Abattoir_._Died_on_Farm == "Abattoir") / n(),
+    Farm_deaths = 100 * sum(Abattoir_._Died_on_Farm == "Died on Farm") / n(),
+    mean_total_conditions = mean(as.integer(Total_Conditions_per_Animal)),
+    number_of_animals = n()) %>%
+  arrange(desc(number_of_animals))
+Sex_summary
+```
+
 
 Sex:
 
 ```{r}
 Sex_freq_table <- combined_data_without_outliers %>%
   group_by(Sex) %>%
-  summarise(frequency = n()) %>%
+  tally(name="frequency") %>%
   arrange(desc(frequency))
 Sex_freq_table
 
@@ -498,23 +540,117 @@ sex_by_production
 ```
 
 
+mean age of male dairy animals
+```{r}
+combined_data_without_outliers %>%
+  filter(Beef_or_Dairy == "Dairy") %>%
+  group_by(Sex)%>%
+  summarize(mean_conditions = mean(Total_Conditions_per_Animal), 
+            mean_age = mean(days_alive))
+
+
+combined_data_without_outliers %>%
+  filter(Beef_or_Dairy == "Beef") %>%
+  group_by(Sex)%>%
+  summarize(mean_conditions = mean(Total_Conditions_per_Animal), 
+            mean_age = mean(days_alive))
+
+```
+
+the mean number of conditions existing in an animal is analogous with their age (both for dairy and beef animals). The younger an animal is died the less health conditions is has.
+Thus females which live 3 times longer than males for dairy and 1.5 times longer than males for beef have in average more conditions than male
+
+Healthy male animals
+```{r}
+healthy_animals <- combined_data_without_outliers %>%
+  filter(Total_Conditions_per_Animal == 0)
+mean_age_healthy_animals <- aggregate(days_alive ~ Sex + Beef_or_Dairy, data = healthy_animals, mean)
+mean_age_healthy_animals
+```
+
+```{r}
+
+avd <- aggregate(days_alive ~ Sex + Beef_or_Dairy, data = combined_data_without_outliers, mean)
+avd
+```
+
+```{r}
+healthy_vs_unhealthy <- avd %>%
+  mutate(days_alive_unhealthy = mean_age_healthy_animals$days_alive, difference = days_alive-days_alive_unhealthy)
+healthy_vs_unhealthy
+```
+
+Healthy animals live less than the unhealthy ones the biggest differences is for beef bulls(94 days) and dairy female(82 days).
+Why Bulls and Female beef animals live so much longer than the male beef animals?
+Bulls and male dairy animals are not slaughter for meet?
+why do they live approximatelly 4.5 months more than male beef animals?
+
+
 
 Herd_id:
 
 ```{r}
+detach(package:plyr)
 
+```
+
+```{r}
 Herd_freq_table <- combined_data_without_outliers %>%
   group_by(Herd_Id) %>%
   summarise(frequency = n(), age_days= mean(days_alive), age_years=mean(years_alive)) %>%
   arrange(desc(frequency))
+Herd_freq_table
 Herd_freq_table <- Herd_freq_table %>%
-  mutate(percentage = frequency/total_animals*100)
+  mutate(percentage = frequency/total_animals_no_outliers*100)
 print(Herd_freq_table)
-paste("mean age for small herds (<100) = ", mean(Herd_freq_table$age_years[Herd_freq_table$frequency < 100]), "years", "total number of small herds = ", nrow(Herd_freq_table[Herd_freq_table$frequency < 100, ]))
-paste("mean age for medium size herds (>=100, <= 1000) = ", mean(Herd_freq_table$age_years[Herd_freq_table$frequency >=100 & Herd_freq_table$frequency <= 1000]), "years", "total number of medium size herds = ", nrow(Herd_freq_table[Herd_freq_table$frequency >=100 & Herd_freq_table$frequency <= 1000, ]))
-paste("mean age for big herds (>1000) = ", mean(Herd_freq_table$age_years[Herd_freq_table$frequency >1000]), "years", "total number of small herds = ", nrow(Herd_freq_table[Herd_freq_table$frequency >1000, ]))
+paste("mean age for small herds (<100) = ", mean(Herd_freq_table$age_days[Herd_freq_table$frequency < 100]), "days", "total number of small herds = ", nrow(Herd_freq_table[Herd_freq_table$frequency < 100, ]))
+paste("mean age for medium size herds (>=100, <= 1000) = ", mean(Herd_freq_table$age_days[Herd_freq_table$frequency >=100 & Herd_freq_table$frequency <= 1000]), "days", "total number of medium size herds = ", nrow(Herd_freq_table[Herd_freq_table$frequency >=100 & Herd_freq_table$frequency <= 1000, ]))
+paste("mean age for big herds (>1000) = ", mean(Herd_freq_table$age_days[Herd_freq_table$frequency >1000]), "days", "total number of small herds = ", nrow(Herd_freq_table[Herd_freq_table$frequency >1000, ]))
 
 ```
+
+
+```{r}
+combined_data_without_outliers %>%
+  filter(Herd_Id=="2235596e92fa62703d8becf995e884058dafedb6") %>%
+  aggregate(days_alive ~ Sex, mean)
+
+```
+
+
+Herd summary
+```{r}
+overall_percent_of_healty <- nrow(healthy_animals)/ total_animals_no_outliers *100
+herd_summary <- combined_data_without_outliers %>%
+  group_by(Herd_Id) %>%
+  summarise(
+    mean_age = mean(days_alive),
+    percent_of_total_animals = n() * 100/ total_animals_no_outliers,
+    percent_male = mean(Sex == "M") * 100,
+    percent_female = mean(Sex == "F") * 100,
+    percent_bull = mean(Sex == "B") * 100,
+    percent_dairy = mean(Beef_or_Dairy == "Dairy") * 100,
+    percent_beef = mean(Beef_or_Dairy == "Beef") * 100,
+    Abattoir_deaths = 100 * sum(Abattoir_._Died_on_Farm == "Abattoir") / n(),
+    Farm_deaths = 100 * sum(Abattoir_._Died_on_Farm == "Died on Farm") / n(),
+    mean_total_conditions = mean(as.integer(Total_Conditions_per_Animal)),
+    number_of_animals = n(),
+  percent_healthy_animals = sum(Total_Conditions_per_Animal==0) / number_of_animals *100) %>%
+  arrange(desc(number_of_animals))
+herd_summary
+```
+
+
+```{r}
+
+herd_summary %>%
+  filter(number_of_animals == 1)
+  
+
+```
+
+
+
 
 
 ```{r}
@@ -563,6 +699,28 @@ abattoir_freq_table
 
 ```
 
+```{r}
+abattoir_summary <- combined_data_without_outliers %>%
+  group_by(Abbatoir) %>%
+  summarise(
+    mean_age = mean(days_alive),
+    percent_of_total_animals = n() * 100/ total_animals_no_outliers,
+    percent_male = mean(Sex == "M") * 100,
+    percent_female = mean(Sex == "F") * 100,
+    percent_bull = mean(Sex == "B") * 100,
+    percent_dairy = mean(Beef_or_Dairy == "Dairy") * 100,
+    percent_beef = mean(Beef_or_Dairy == "Beef") * 100,
+    mean_total_conditions = mean(as.integer(Total_Conditions_per_Animal)),
+    number_of_animals = n(),
+  percent_healthy_animals = sum(Total_Conditions_per_Animal==0) / number_of_animals *100) %>%
+  arrange(desc(number_of_animals))
+abattoir_summary
+
+  combined_data_without_outliers %>% 
+    filter(Abbatoir=="8a60fb1b9b40ed0fdc5d3c061e9388972f3bdce4") %>%
+    filter(Total_Conditions_per_Animal>0)
+```
+
 
 ```{r}
 combined_data_without_outliers[combined_data_without_outliers$Abbatoir == "9abde47a328f28fc47333a1711c260a14715c2bb", ]
@@ -573,22 +731,26 @@ combined_data_without_outliers[combined_data_without_outliers$Abbatoir == "432d3
 How many abattoirs were active every year we will use the dataset including the outliers
 ```{r}
 # 2018
-data_2018 <- filter(combined_data_without_outliers, format(Dod, "%Y") == "2018")
+data_2018 <- combined_data_without_outliers %>% 
+  filter(combined_data_without_outliers$Year == "2018")
 abattoirs2018 <- unique(data_2018$Abbatoir)
 num_abbatoirs_2018 <- n_distinct(data_2018$Abbatoir)
 paste("number of Abattoir in 2018", num_abbatoirs_2018)
 # 2019
-data_2019 <- filter(combined_data_without_outliers, format(Dod, "%Y") == "2019")
+data_2019 <- combined_data_without_outliers %>% 
+  filter(combined_data_without_outliers$Year == "2019")
 abattoirs2019 <- unique(data_2019$Abbatoir)
 num_abbatoirs_2019 <- n_distinct(data_2019$Abbatoir)
 paste("number of Abattoir in 2019", num_abbatoirs_2019)
 # 2020
-data_2020 <- filter(combined_data_without_outliers, format(Dod, "%Y") == "2020")
+data_2020 <- combined_data_without_outliers %>% 
+  filter(combined_data_without_outliers$Year == "2020")
 abattoirs2020 <- unique(data_2020$Abbatoir)
 num_abbatoirs_2020 <- n_distinct(data_2020$Abbatoir)
 paste("number of Abattoir in 2019", num_abbatoirs_2020)
 # 2021
-data_2021 <- filter(combined_data_without_outliers, format(Dod, "%Y") == "2021")
+data_2021 <- combined_data_without_outliers %>% 
+  filter(combined_data_without_outliers$Year == "2021")
 abattoirs2021 <- unique(data_2021$Abbatoir)
 num_abbatoirs_2021 <- n_distinct(data_2021$Abbatoir)
 paste("number of Abattoir in 2021", num_abbatoirs_2021)
@@ -630,34 +792,19 @@ ggsave("./data/combined_figs/abattoir_by_production.png", plot=abattoir_by_produ
 
 Dead Animals per year
 
-```{r}
-# 2018
-data_2018_no_outliers <- filter(combined_data_without_outliers, format(Dod, "%Y") == "2018")
-
-# 2019
-data_2019_no_outliers <- filter(combined_data_without_outliers, format(Dod, "%Y") == "2019")
-
-# 2020
-data_2020_no_outliers <- filter(combined_data_without_outliers, format(Dod, "%Y") == "2020")
-
-# 2021
-data_2021_no_outliers <- filter(combined_data_without_outliers, format(Dod, "%Y") == "2021")
-
-```
-
 
 ```{r}
-paste("in 2018 we had ", nrow(data_2018_no_outliers), "dead animals")
-paste("in 2019 we had ", nrow(data_2019_no_outliers), "dead animals")
-paste("in 2020 we had ", nrow(data_2020_no_outliers), "dead animals")
-paste("in 2021 we had ", nrow(data_2021_no_outliers), "dead animals")
+paste("in 2018 we had ", nrow(data_2018), "dead animals")
+paste("in 2019 we had ", nrow(data_2019), "dead animals")
+paste("in 2020 we had ", nrow(data_2020), "dead animals")
+paste("in 2021 we had ", nrow(data_2021), "dead animals")
 
 
 # create a table 
 animals_by_year <- data.frame(year = c("2018", "2019", "2020", "2021"),
-                              count = c(nrow(data_2018_no_outliers), nrow(data_2019_no_outliers), nrow(data_2020_no_outliers), nrow(data_2021_no_outliers)),
-                              mean_age_days = c(mean(data_2018_no_outliers$days_alive), mean(data_2019_no_outliers$days_alive), mean(data_2020_no_outliers$days_alive), mean(data_2021_no_outliers$days_alive)),
-                              mean_age_years = c(mean(data_2018_no_outliers$years_alive), mean(data_2019_no_outliers$years_alive), mean(data_2020_no_outliers$years_alive), mean(data_2021_no_outliers$years_alive))
+                              count = c(nrow(data_2018), nrow(data_2019), nrow(data_2020), nrow(data_2021)),
+                              mean_age_days = c(mean(data_2018$days_alive), mean(data_2019$days_alive), mean(data_2020$days_alive), mean(data_2021$days_alive)),
+                              mean_age_years = c(mean(data_2018$years_alive), mean(data_2019$years_alive), mean(data_2020$years_alive), mean(data_2021$years_alive))
                               )
 ```
 
@@ -709,6 +856,27 @@ mean_age_years_per_year
 ```
 
 
+```{r}
+dvo_summary <- combined_data_without_outliers %>%
+  group_by(Dvo_Code) %>%
+  summarise(
+    mean_age = mean(days_alive),
+    percent_of_total_animals = n() * 100/ total_animals_no_outliers,
+    percent_male = mean(Sex == "M") * 100,
+    percent_female = mean(Sex == "F") * 100,
+    percent_bull = mean(Sex == "B") * 100,
+    percent_dairy = mean(Beef_or_Dairy == "Dairy") * 100,
+    percent_beef = mean(Beef_or_Dairy == "Beef") * 100,
+    Abattoir_deaths = 100 * sum(Abattoir_._Died_on_Farm == "Abattoir") / n(),
+    Farm_deaths = 100 * sum(Abattoir_._Died_on_Farm == "Died on Farm") / n(),
+    mean_total_conditions = mean(as.integer(Total_Conditions_per_Animal)),
+    number_of_animals = n(),
+  percent_healthy_animals = sum(Total_Conditions_per_Animal==0) / number_of_animals *100) %>%
+  arrange(desc(number_of_animals))
+dvo_summary
+```
+
+
 Dvo Code:
 
 ```{r}
@@ -718,6 +886,7 @@ Dvo_freq_table <- combined_data_without_outliers %>%
   arrange(desc(frequency))
 Dvo_freq_table
 ```
+
 
 Distribution of Dvo
 Newry has the biggest amount of animals second is Dungannon and third is Armagh. only Enniskillen has less than 100k animals
@@ -778,6 +947,32 @@ nlevels(combined_data_without_outliers$Breed)
 
 Breed:
 82% of animals belongs to the 6.5% of breeds
+
+
+```{r}
+breed_summary <- combined_data_without_outliers %>%
+  group_by(Breed) %>%
+  summarise(
+    mean_age = mean(days_alive),
+    percent_of_total_animals = n() * 100/ total_animals_no_outliers,
+    percent_male = mean(Sex == "M") * 100,
+    percent_female = mean(Sex == "F") * 100,
+    percent_bull = mean(Sex == "B") * 100,
+    percent_dairy = mean(Beef_or_Dairy == "Dairy") * 100,
+    percent_beef = mean(Beef_or_Dairy == "Beef") * 100,
+    Abattoir_deaths = 100 * sum(Abattoir_._Died_on_Farm == "Abattoir") / n(),
+    Farm_deaths = 100 * sum(Abattoir_._Died_on_Farm == "Died on Farm") / n(),
+    mean_total_conditions = mean(as.integer(Total_Conditions_per_Animal)),
+    number_of_animals = n(),
+  percent_healthy_animals = sum(Total_Conditions_per_Animal==0) / number_of_animals *100) %>%
+  arrange(desc(number_of_animals))
+breed_summary %>%
+  filter(percent_dairy==100)
+```
+
+
+
+
 ```{r}
 Breed_freq_table <- combined_data_without_outliers %>%
   group_by(Breed) %>%
@@ -876,6 +1071,7 @@ We have 92 different breeds.
 While 20 breeds have less than 10 animals.
 6 breeds have more than 100k animals this is 82% of the total animals
 
+
 Abattoir_._Died_on_Farm:
 31% of dairy animals died on farm and only 9% of the beef animals died on farm
 ```{r}
@@ -947,7 +1143,7 @@ summary(combined_data_without_outliers[, "Total_Conditions_per_Animal"])
 how many animals per number of conditions?
 ```{r}
 
-conditions_table <- table(data_without_outliers$Total_Conditions_per_Animal)
+conditions_table <- table(combined_data_without_outliers$Total_Conditions_per_Animal)
 conditions_table
 paste("animals without conditions:", round(sum(combined_data_without_outliers$Total_Conditions_per_Animal==0)/total_animals_no_outliers*100, 2), "%")
 paste("animals with 1 condition:", round(sum(combined_data_without_outliers$Total_Conditions_per_Animal==1)/total_animals_no_outliers*100, 2), "%")

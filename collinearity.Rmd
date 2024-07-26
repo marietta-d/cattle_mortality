@@ -1,0 +1,96 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+library(tidyverse)
+library(broom)
+library(dplyr)
+library(tidyr)
+library(survival)
+library(survminer)
+library(ggplot2)
+library(ggpubr)
+library(caret)
+library(GGally)
+library(MASS)
+```
+
+Check the collinearity
+```{r}
+data <- read.csv("./data/filtered_conditions_breeds.csv")
+head(data)
+colnames(data)
+```
+
+```{r}
+data_collinearity <- data[c(2, 7, 8, 9, 12, 13, 14, 16, 19:48)]
+colnames(data_collinearity)
+```
+
+
+```{r}
+fit1<- lm(days_alive ~., data=data_collinearity)
+summary(fit1)
+```
+
+
+```{r}
+par(mfrow=c(2,2))
+plot(fit1)
+```
+
+
+```{r}
+data_collinearity
+new_data_indeces <- createDataPartition(data_collinearity$days_alive, p=0.1, list=FALSE)
+new_data <- data_collinearity[new_data_indeces, ]
+```
+
+```{r}
+perform_chi_sq <- function(var1, var2) {
+  contigency_table <- table(data_collinearity[[var1]], data_collinearity[[var2]])
+  test_results <- chisq.test(contigency_table, simulate.p.value = TRUE)
+  results <- tibble(
+    Var1 = var1,
+    Var2 = var2,
+    ChiSquared = test_results$statistic,
+    df= test_results$parameter,
+    p_value = test_results$p.value
+  )
+  return(results)
+}
+
+variable_pairs <- combn(colnames(data_collinearity), 2, simplify = FALSE)
+
+res <- map_dfr(variable_pairs, ~perform_chi_sq(.x[1], .x[2]))
+res <- res %>%
+  mutate(p_adjusted = p.adjust(p_value, method = "bonferroni"))
+
+res
+
+significant_results <- res %>%
+  filter(p_adjusted < 0.05) %>%
+  arrange(p_adjusted)
+
+
+
+```
+
+```{r}
+
+contigency_table1 <- table(as.factor(data_collinearity$Total_Conditions_per_Animal), as.factor(data_collinearity$Beef_or_Dairy))
+contigency_table1
+chisq.test(contigency_table1, simulate.p.value = TRUE)
+
+```
+
+```{r}
+library(FactoMineR)
+```
+```{r}
+famb_results <- FAMD(data_collinearity)
+```
+

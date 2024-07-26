@@ -11,6 +11,7 @@ Load complete data file into a new object "data"
 
 ```{r}
 library(tidyverse)
+library(plyr)
 library(dplyr)
 library(visdat)
 library(splitstackshape)
@@ -56,7 +57,6 @@ We have 10 categorical variables , 2 date variables and 1 numerical
 data <- raw_data[, -1]
 head(data)
 ```
-
 
 
 
@@ -153,27 +153,9 @@ Delete rows with missing values in Date of birth
 ```{r}
 clean_data <- clean_data %>%
   drop_na(Dob)
-
+head(clean_data)
 ```
 
-for the 21 cases of missing values in Dvo_Code variable we will try to use the information from herd Id or abbatoir id to find the area code
-
-```{r}
-missing_dvo <- clean_data[is.na(clean_data$Dvo_Code), ]
-print(paste("herd_id for missing Dvo_Code:", unique(missing_dvo$Herd_Id))) # two herd ids for the missing values of Dvo_code
-subset(clean_data, clean_data$Herd_Id=="85fd7d9610327e69a0b8e2767976c3261db39c87" | clean_data$Herd_Id=="7e7fec988d614e62f63db6d3547aa653c3fe48f3") # for this herd ids we do not have Dvo_code from other animals in the dataset
-
-list_abbatoir_id_for_dvo <- unique(missing_dvo$Abbatoir)
-print(paste("abbatoir_id for missing Dvo_Code:", unique(missing_dvo$Abbatoir)))
-subset(clean_data, clean_data$Abbatoir=="cdf0a11f70869c640bfe6c23935ff3da4acfb7b0" | clean_data$Abbatoir=="8a60fb1b9b40ed0fdc5d3c061e9388972f3bdce4")
-```
-
-Because it is only 21 entries we will exclude them from our analysis
-
-```{r}
-clean_data <- clean_data %>%
-  drop_na(Dvo_Code)
-```
 
 
 ```{r}
@@ -184,9 +166,10 @@ colSums(is.na(clean_data))
 
 Delete 8 rows
 ```{r}
+clean_data[clean_data$Sex=="U",]
 clean_data <- clean_data %>%
   filter(Sex!="U")
-
+clean_data[clean_data$Sex=="U",]
 ```
 
 
@@ -196,24 +179,50 @@ clean_data <- droplevels(clean_data)
 print(sapply(clean_data, nlevels))
 print(sapply(data, nlevels))
 ```
+```{r}
+clean_data
+```
 
 
 ### Handle ConditionsbyAI variable
 
-Conditions by AI have 6736 different levels
+Conditions by AI have 6718 different levels
 in each row there are multiple conditions
 We will create different column for each condition
 
 ```{r}
 # Handle missing values and remove trailing asterisks in the "ConditionsbyAI" column
-clean_data$ConditionsbyAI <- as.character(clean_data$ConditionsbyAI)
-head(clean_data)
+levels(clean_data$ConditionsbyAI)
 ```
+
+
+```{r}
+clean_data %>%
+  filter(ConditionsbyAI=="*") # 994 cases have * and 0 total conditions
+clean_data %>%
+  filter(ConditionsbyAI=="**") # 1 case have ** and 0 total conditions
+
+```
+
+
 
 ```{r}
 # Assign the value No for no disease
-clean_data$ConditionsbyAI[-is.na(clean_data$ConditionsbyAI) | (clean_data$ConditionsbyAI)=="*" | (clean_data$ConditionsbyAI)=="**"] <- "No"
-head(clean_data)
+na_cond <- sum(is.na(clean_data$ConditionsbyAI))
+zero_cond <- sum(clean_data$Total_Conditions_per_Animal==0)
+paste(zero_cond-na_cond, "rows are not NA at the conditions column but have zero conditions at the Total_conditions_per_Animal column these are the cases with one or two asterisks")
+```
+
+change the asterisks to No
+```{r}
+levels(clean_data$ConditionsbyAI)[levels(clean_data$ConditionsbyAI)=="*"] <- "No"
+levels(clean_data$ConditionsbyAI)[levels(clean_data$ConditionsbyAI)=="**"] <- "No"
+```
+
+
+replace NA with No
+```{r}
+clean_data$ConditionsbyAI[is.na(clean_data$ConditionsbyAI)] <- "No"
 ```
 
 
@@ -248,12 +257,13 @@ data_table[data_table$Animal_Id== "ca31ff9491fcac3786e00ea5857607e8a15504a7", Co
 
 ```{r}
 
-data_table_long[data_table_long$Animal_Id=="ca31ff9491fcac3786e00ea5857607e8a15504a7", ConditionsbyAI]
+data_table_long[data_table_long$Animal_Id=="ca31ff9491fcac3786e00ea5857607e8a15504a7", ]
 ```
 
 Exclude duplicated entries from the dataset
 ```{r}
 data_table_long <- unique(data_table_long)
+data_table_long[data_table_long$Animal_Id=="ca31ff9491fcac3786e00ea5857607e8a15504a7", ]
 ```
 
 
@@ -292,7 +302,7 @@ For survival analysis our dataset must have one column with the age of the anima
 All animals are dead thus censored status for all entries will be 2=dead, 1=censored 
 ```{r}
 new_data_long$status <- 2
-head(data_long)
+head(new_data_long)
 ```
 
 We will calculate the months, years and the days alive for each animal. We will store these values as numeric
@@ -331,6 +341,24 @@ data_wide <- new_data_long %>%
 
 # Save the data
 write.csv(data_wide, file="./data/data_wide.csv")
+```
+
+
+```{r}
+
+data_wide
+sum(duplicated(data_wide))
+
+```
+
+```{r}
+data_wide[data_wide$Animal_Id=="ca6e37446ba6273258ead8171542e7568842efe1", ]
+new_data_long[new_data_long$Animal_Id =="ca6e37446ba6273258ead8171542e7568842efe1", ]
+```
+```{r}
+data_wide[data_wide$Animal_Id=="e41260ae263c07e8ce5ca68505ecb611c8c2a6ae", ]
+new_data_long[new_data_long$Animal_Id =="e41260ae263c07e8ce5ca68505ecb611c8c2a6ae", ]
+
 ```
 
 
@@ -387,7 +415,7 @@ read_and_label <- function(file_path) {
 data_list <- lapply(file_list, read_and_label)
 
 combined_data <- bind_rows(data_list)
-
+combined_data
 
 ```
 
@@ -401,8 +429,9 @@ merge the two data sets on DVO and Dod (month and year)
 ```{r}
 merged_data <- merge(new_data_long, combined_data, by = c("Dvo_Code", "Year", "Month"))
 
-nrow(merged_data[merged_data$Year == 2022, ])
+nrow(merged_data)
 ```
+
 ```{r}
 nrow(new_data_long[new_data_long$Year==2022, ])
 
@@ -420,8 +449,8 @@ head(merged_data)
 
 
 ```{r}
-merged_data <- merged_data[, 1:20]
-
+long_merged_data <- merged_data[, 1:20]
+head(long_merged_data)
 ```
 
 
@@ -471,6 +500,8 @@ merged_data$Herd_Id <- as.character(merged_data$Herd_Id)
 ```{r}
 str(merged_data)
 ```
+
+
 ```{r}
 herd_id_size <- combined_data$Herd_Id
 
@@ -480,6 +511,8 @@ common_ids <- intersect(herd_id_size, herd_id_old_data)
 common_ids
 sum(herd_id_size%in%herd_id_old_data)
 ```
+
+
 ```{r}
 unique(sort(herd_id_size))
 ```
@@ -494,7 +527,7 @@ unique(sort(herd_id_old_data))
 
 
 ```{r}
-colnames(merged_data)
+colnames(long_merged_data)
 ```
 
 
@@ -503,15 +536,20 @@ colnames(merged_data)
 One hot encoding ConditionsbyAI for merged data
 
 ```{r}
-merged_wide <- merged_data %>%
+
+merged_wide <- long_merged_data %>%
   mutate(ConditionPresent = 1) %>%
   pivot_wider(names_from = ConditionsbyAI, values_from = ConditionPresent, values_fill = list(ConditionPresent = 0))
+
+merged_wide[merged_wide$Animal_Id=="5dd425da1403654d3dff7ea12ff3e1d1d9f82af2", ]
+merged_data[merged_data$Animal_Id=="5dd425da1403654d3dff7ea12ff3e1d1d9f82af2", ]
+long_merged_data[long_merged_data$Animal_Id=="5dd425da1403654d3dff7ea12ff3e1d1d9f82af2", ]
 
 ```
 
 
 save dataset in a csv file
 ```{r}
-write.csv(merged_wide, file="./data/merged_weather_wide.csv")
+write.csv(merged_wide, file="./data/merged_weather_wide.csv", row.names = FALSE)
 ```
 
