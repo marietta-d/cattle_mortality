@@ -565,23 +565,27 @@ Healthy male animals
 ```{r}
 healthy_animals <- combined_data_without_outliers %>%
   filter(Total_Conditions_per_Animal == 0)
+unhealthy_animals <- combined_data_without_outliers %>%
+  filter(Total_Conditions_per_Animal > 0)
 mean_age_healthy_animals <- aggregate(days_alive ~ Sex + Beef_or_Dairy, data = healthy_animals, mean)
 mean_age_healthy_animals
+mean_age_unhealthy_animals <- aggregate(days_alive ~ Sex + Beef_or_Dairy, data = unhealthy_animals, mean)
+mean_age_unhealthy_animals
 ```
 
 ```{r}
 
-avd <- aggregate(days_alive ~ Sex + Beef_or_Dairy, data = combined_data_without_outliers, mean)
-avd
+mean_age_all_data <- aggregate(days_alive ~ Sex + Beef_or_Dairy, data = combined_data_without_outliers, mean)
+mean_age_all_data
 ```
 
 ```{r}
-healthy_vs_unhealthy <- avd %>%
-  mutate(days_alive_unhealthy = mean_age_healthy_animals$days_alive, difference = days_alive-days_alive_unhealthy)
+healthy_vs_unhealthy <- mean_age_all_data %>%
+  mutate(healthy = mean_age_healthy_animals$days_alive, unhealthy = mean_age_unhealthy_animals$days_alive , difference = healthy-unhealthy)
 healthy_vs_unhealthy
 ```
 
-Healthy animals live less than the unhealthy ones the biggest differences is for beef bulls(94 days) and dairy female(82 days).
+Healthy animals live less than the unhealthy ones the biggest differences is for beef bulls(465.61 days) and dairy female(353.37 days).
 Why Bulls and Female beef animals live so much longer than the male beef animals?
 Bulls and male dairy animals are not slaughter for meet?
 why do they live approximatelly 4.5 months more than male beef animals?
@@ -590,10 +594,6 @@ why do they live approximatelly 4.5 months more than male beef animals?
 
 Herd_id:
 
-```{r}
-detach(package:plyr)
-
-```
 
 ```{r}
 Herd_freq_table <- combined_data_without_outliers %>%
@@ -896,7 +896,7 @@ bar_plot_Dvo <- ggplot(combined_data_without_outliers, aes(x=Dvo_Code)) +
   geom_bar(color="steelblue", fill="steelblue") +
   labs(title="Distribution of animals per DVO", x="DVO Code", y="No of Animals")+
   scale_y_continuous(labels = label_number(scale = 1e-3, suffix = "k")) +
-  theme_minimal()
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 bar_plot_Dvo
 ggsave("./data/combined_figs/bar_plot_Dvo.png", plot = bar_plot_Dvo, width = 8, height = 6)
 ```
@@ -908,7 +908,7 @@ bar_plot_Dvo_by_production <- ggplot(combined_data_without_outliers, aes(x=Dvo_C
   geom_bar(position="fill", stat="count", color="steelblue") +
   labs(title="Distribution of animals per DVO", x="DVO Code", y="No of Animals")+
   #scale_y_continuous(labels = label_number(scale = 1e-3, suffix = "k")) +
-  theme_minimal()
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 bar_plot_Dvo_by_production
 ggsave("./data/combined_figs/bar_plot_Dvo_by_production.png", plot = bar_plot_Dvo_by_production, width = 8, height = 6)
 ```
@@ -925,7 +925,7 @@ unique_counts
 ggplot(combined_data_without_outliers, aes(x=Dvo_Code)) +
   geom_bar(color="steelblue", fill="steelblue") +
   labs(title="Barplot of Dvo code", x="Dvo code", y="No of animals") +
-  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   scale_y_continuous(breaks = unique_counts) +
   scale_x_discrete(labels = function(x) str_wrap(x, width = 10))
 ```
@@ -1524,9 +1524,7 @@ ggsave("./data/combined_figs/temperature_by_production_deaths.png", plot=tempera
 
 ### Condition columns
 # keep only the unhealthy animals
-```{r}
-colSums(unhealthy[, 21:92])
-```
+
 
 ```{r}
 unhealthy <- combined_data_without_outliers %>%
@@ -1548,7 +1546,9 @@ print("some conditions are more common:" )
 conditions_names[colSums(unhealthy[, 21:92]) > 3952]
 
 ```
-
+```{r}
+colSums(unhealthy[, 21:92])
+```
 # Create data frame for all conditions
 ```{r}
 conditions_list <- colnames(unhealthy[21:92])
@@ -1576,7 +1576,7 @@ for (i in 1:num_conditions) {
 all_conditions_df %>%
   arrange(desc(animals))
 summary(all_conditions_df$mean_age)
-all_conditions_df[all_conditions_df$mean_age >2000,]]
+all_conditions_df[all_conditions_df$mean_age >2000,]
 summary(unhealthy$days_alive)
 ```
 
@@ -1637,188 +1637,6 @@ ggplot(top_conditions_without_no, aes(x = conditions, y = frequency)) +
 ```
 
 
-
-
-```{r}
-long_survival_data <- read.csv("./data/data_long.csv")
-```
-
-
-Change the type of variables
-```{r}
-long_survival_data[,c("Dob", "Dod")] = lapply(long_survival_data[,c("Dob", "Dod")],
-                                function(x) as.Date(x))
-```
-
-
-```{r}
-long_survival_data[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy")] = 
-  lapply(long_survival_data[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy")],
-                                function(x) as.factor(x))
-```
-
-
-
-Delete outliers
-```{r}
-outliers_long3 <- (long_survival_data$years_alive < quantile(long_survival_data$years_alive, 0.25) - 3*IQR(long_survival_data$years_alive)) | (long_survival_data$years_alive > quantile(long_survival_data$years_alive, 0.75) + 3*IQR(long_survival_data$years_alive)) 
-
-```
-
-Delete outliers
-```{r}
-# We will take the 3*IQR
-long_data_without_outliers <- long_survival_data[!outliers_long3, ]
-long_data_without_outliers
-```
-
-
-
-Frequency table of conditions
-
-```{r}
-
-conditions_freq_table <- long_data_without_outliers %>%
-  group_by(ConditionsbyAI) %>%
-  summarise(frequency = n()) %>%
-  arrange(desc(frequency))
-conditions_freq_table
-```
-
-```{r}
-conditions_type_sex_freq_table <- long_data_without_outliers %>%
-  group_by(ConditionsbyAI, Sex, Beef_or_Dairy) %>%
-  summarise(frequency = n(), .groups = "drop") %>%
-  arrange(desc(frequency))
-
-conditions_type_sex_freq_table
-```
-
-
-```{r}
-N <- 10
-top_conditions <- long_data_without_outliers %>%
-  count(ConditionsbyAI, sort=TRUE) %>%
-  top_n(N, n) %>%
-  pull(ConditionsbyAI)
-
-filtered_conditions <- long_data_without_outliers %>%
-  filter(ConditionsbyAI %in% top_conditions)
-
-
-ggplot(filtered_conditions, aes(x=ConditionsbyAI)) +
-  geom_bar(color="steelblue", fill="steelblue") +
-  labs(title="barplot of conditions", x="Condition", y="Frequency")
-  theme_minimal() +
-  coord_flip()
-```
-
-
-filter out zero conditions
-```{r}
-without_zero_conditions <- long_data_without_outliers %>%
-  filter(ConditionsbyAI!="No")
-without_zero_conditions
-
-N <- 10
-top_conditions_without_zero <- without_zero_conditions %>%
-  count(ConditionsbyAI, sort=TRUE) %>%
-  top_n(N, n) %>%
-  pull(ConditionsbyAI)
-
-filtered_conditions_without_zero <- without_zero_conditions %>%
-  filter(ConditionsbyAI %in% top_conditions)
-
-
-
-dist_health_conditions <- ggplot(filtered_conditions_without_zero, aes(x=reorder(ConditionsbyAI,ConditionsbyAI,
-                     function(x) length(x)), fill=Beef_or_Dairy)) +
-  geom_bar(color="steelblue") +
-  labs(title="Distribution of health conditions (top 10)", x="Condition", y="Frequency") +
-  theme(axis.text.x = element_text(color = "grey20", size = 15, angle = 0, hjust = .5, vjust = .5, face = "plain"),
-        axis.text.y = element_text(color = "grey20", size = 15, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
-        axis.title.x = element_text(color = "grey20", size = 15, angle = 0, hjust = .5, vjust = 0, face = "plain"),
-        axis.title.y = element_text(color = "grey20", size = 15, angle = 90, hjust = .5, vjust = .5, face = "plain"),
-        panel.background = element_rect(fill = "transparent"), # bg of the panel
-        plot.background = element_rect(fill = "transparent", color = NA))  +
-  coord_flip()
-dist_health_conditions
-ggsave("x_dist_health_conditions.png", plot=dist_health_conditions.png, width=8, height = 6)
-```
-
-
-```{r}
-
-sorted_data <- without_zero_conditions[order(without_zero_conditions$ConditionsbyAI, decreasing = FALSE), ] 
-
-type_conditions_1 <- ggplot(sorted_data[1: 185000, ], aes(x=ConditionsbyAI, fill = Beef_or_Dairy)) +
-  geom_bar(color="steelblue") +
-  labs(title="Conditions by production", x="Condition", y="Frequency")+
-  theme_minimal() +
-  coord_flip()
-
-type_conditions_2 <-ggplot(sorted_data[185000: 250000, ], aes(x=ConditionsbyAI, fill = Beef_or_Dairy)) +
-  geom_bar(color="steelblue") +
-  labs(title="Conditions by production", x="Condition", y="Frequency")+
-  theme_minimal() +
-  coord_flip()
-
-type_conditions_3 <-ggplot(sorted_data[250000: 450000, ], aes(x=ConditionsbyAI, fill = Beef_or_Dairy)) +
-  geom_bar(color="steelblue") +
-  labs(title="Conditions by production", x="Condition", y="Frequency")+
-  theme_minimal() +
-  coord_flip()
-
-type_conditions_4 <-ggplot(sorted_data[450000:565052, ], aes(x=ConditionsbyAI, fill = Beef_or_Dairy)) +
-  geom_bar(color="steelblue") +
-  labs(title="Conditions by production", x="Condition", y="Frequency")+
-  theme_minimal() +
-  coord_flip()
-
-
-production_conditions_all <- ggarrange(type_conditions_1, type_conditions_2, type_conditions_3, type_conditions_4, nrow = 2, ncol=2)
-production_conditions_all
-ggsave("production_conditions_all.png", plot=production_conditions_all, heigh=10, width = 12)
-```
-
-```{r}
-sex_condition_1 <-ggplot(sorted_data[1: 185000, ], aes(x=ConditionsbyAI, fill = Sex)) +
-  geom_bar(color="steelblue") +
-  labs(title="Conditions by sex", x="Condition", y="Frequency")+
-  theme_minimal() +
-  coord_flip()
-
-sex_condition_2 <-ggplot(sorted_data[185000: 250000, ], aes(x=ConditionsbyAI, fill = Sex)) +
-  geom_bar(color="steelblue") +
-  labs(title="Conditions by sex", x="Condition", y="Frequency")+
-  theme_minimal() +
-  coord_flip()
-
-sex_condition_3 <-ggplot(sorted_data[250000: 450000, ], aes(x=ConditionsbyAI, fill = Sex)) +
-  geom_bar(color="steelblue") +
-  labs(title="Conditions by sex", x="Condition", y="Frequency")+
-  theme_minimal() +
-  coord_flip()
-
-sex_condition_4 <-ggplot(sorted_data[450000:565052, ], aes(x=ConditionsbyAI, fill = Sex)) +
-  geom_bar(color="steelblue") +
-  labs(title="Conditions by sex", x="Condition", y="Frequency")+
-  theme_minimal() +
-  coord_flip()
-
-sex_conditions_all <- ggarrange(sex_condition_1, sex_condition_2, sex_condition_3, sex_condition_4, nrow = 2, ncol=2)
-
-ggsave("sex_conditions_all.png", plot=sex_conditions_all, heigh=10, width = 12)
-```
-
-
-Save data without outliers as a csv file
-```{r}
-write.csv(combined_data_without_outliers, file="./data/combined_data_without_outliers.csv")
-
-```
-
-
 # TO DO: check for correlations Between mean age and all other variables
 ```{r}
 ggplot(filtered_breeds, mapping = aes(days_alive, Breed)) +
@@ -1826,10 +1644,17 @@ ggplot(filtered_breeds, mapping = aes(days_alive, Breed)) +
 ```
 
 ```{r}
-ggqqplot(data_without_outliers, x = "days_alive",
+ggqqplot(combined_data_without_outliers, x = "days_alive",
    color = "Beef_or_Dairy", 
    palette = c("#0073C2FF", "#FC4E07"),
    ggtheme = theme_pubclean())
+```
+
+```{r}
+ggqqplot(combined_data_without_outliers, x = "days_alive",
+   color = "Sex", 
+   ggtheme = theme_pubclean())
+```
 ```
 
 
