@@ -482,7 +482,8 @@ Sex_summary <- combined_data_without_outliers %>%
     Abattoir_deaths = 100 * sum(Abattoir_._Died_on_Farm == "Abattoir") / n(),
     Farm_deaths = 100 * sum(Abattoir_._Died_on_Farm == "Died on Farm") / n(),
     mean_total_conditions = mean(as.integer(Total_Conditions_per_Animal)),
-    number_of_animals = n()) %>%
+    number_of_animals = n(),
+    percent_healthy_animals = sum(Total_Conditions_per_Animal==0) / number_of_animals *100) %>%
   arrange(desc(number_of_animals))
 Sex_summary
 ```
@@ -966,8 +967,11 @@ breed_summary <- combined_data_without_outliers %>%
     number_of_animals = n(),
   percent_healthy_animals = sum(Total_Conditions_per_Animal==0) / number_of_animals *100) %>%
   arrange(desc(number_of_animals))
-breed_summary %>%
-  filter(percent_dairy==100)
+
+most_populus_breeds <- breed_summary[1:7, ]
+most_populus_breeds
+# if I take the 7 most populous breeds I get 87% of the total animals and 89% of dairy and 86% of beef
+sum(most_populus_breeds$number_of_animals) / total_animals_no_outliers
 ```
 
 
@@ -983,7 +987,7 @@ Breed_freq_table <- combined_data_without_outliers %>%
 proportion_of_breeds <- Breed_freq_table$No_of_animals/total_animals_no_outliers * 100
 
 Breed_freq_table <- cbind(Breed_freq_table, proportion_of_breeds)
-
+Breed_freq_table
 sum(Breed_freq_table$No_of_animals <10)
 
 # How many breeds have more than 100000 animals
@@ -1031,6 +1035,7 @@ bar_plot_top_breeds <- ggplot(filtered_breeds, aes(x=reorder(Breed,Breed,
 bar_plot_top_breeds
 ggsave("./data/combined_figs/bar_plot_top_breeds.png", plot = bar_plot_top_breeds, width = 8, height = 6)
 ```
+
 ```{r}
 filtered_breeds %>%
   count(Breed)
@@ -1079,6 +1084,35 @@ No_beef_no_outliers <-sum(combined_data_without_outliers$Beef_or_Dairy=="Beef")
 No_dairy_no_outliers <-sum(combined_data_without_outliers$Beef_or_Dairy=="Dairy")
 ```
 
+
+```{r}
+place_of_death_summary <- combined_data_without_outliers %>%
+  group_by(Abattoir_._Died_on_Farm) %>%
+  summarise(
+    mean_age = mean(days_alive),
+    percent_of_total_animals = n() * 100/ total_animals_no_outliers,
+    percent_male = mean(Sex == "M") * 100,
+    percent_female = mean(Sex == "F") * 100,
+    percent_bull = mean(Sex == "B") * 100,
+    percent_dairy = mean(Beef_or_Dairy == "Dairy") * 100,
+    percent_beef = mean(Beef_or_Dairy == "Beef") * 100,
+    mean_total_conditions = mean(as.integer(Total_Conditions_per_Animal)),
+    number_of_animals = n(),
+  percent_healthy_animals = sum(Total_Conditions_per_Animal==0) / number_of_animals *100) %>%
+  arrange(desc(number_of_animals))
+place_of_death_summary
+```
+
+
+```{r}
+summary(combined_data_without_outliers %>%
+  filter(Abattoir_._Died_on_Farm=="Abattoir") )
+summary(combined_data_without_outliers %>%
+  filter(Abattoir_._Died_on_Farm=="Died on Farm"))
+
+```
+
+
 ```{r}
 Where_died_freq_table <- combined_data_without_outliers %>%
   count(Abattoir_._Died_on_Farm, Beef_or_Dairy)
@@ -1105,6 +1139,25 @@ ggsave("./data/combined_figs/place_of_death.png", plot = place_of_death, width =
 
 
 Beef_or_Dairy:
+
+```{r}
+production_summary <- combined_data_without_outliers %>%
+  group_by(Beef_or_Dairy) %>%
+  summarise(
+    mean_age = mean(days_alive),
+    percent_of_total_animals = n() * 100/ total_animals_no_outliers,
+    percent_male = mean(Sex == "M") * 100,
+    percent_female = mean(Sex == "F") * 100,
+    percent_bull = mean(Sex == "B") * 100,
+    Abattoir_deaths = 100 * sum(Abattoir_._Died_on_Farm == "Abattoir") / n(),
+    Farm_deaths = 100 * sum(Abattoir_._Died_on_Farm == "Died on Farm") / n(),
+    mean_total_conditions = mean(as.integer(Total_Conditions_per_Animal)),
+    number_of_animals = n(),
+  percent_healthy_animals = sum(Total_Conditions_per_Animal==0) / number_of_animals *100) %>%
+  arrange(desc(number_of_animals))
+production_summary
+```
+
 
 ```{r}
 Beef_or_Dairy_freq_table <- combined_data_without_outliers %>%
@@ -1160,6 +1213,28 @@ paste("animals with 8 conditions:", round(sum(combined_data_without_outliers$Tot
 paste("animals with 9 conditions:", round(sum(combined_data_without_outliers$Total_Conditions_per_Animal==9)/total_animals_no_outliers*100, 2), "%")
 ```
 
+
+```{r}
+total_conditions_summary <- combined_data_without_outliers %>%
+  group_by(Total_Conditions_per_Animal) %>%
+  summarise(
+    number_of_animals = n(),
+    mean_age = mean(days_alive),
+    percent_of_total_animals = number_of_animals * 100/ total_animals_no_outliers,
+    percent_male = mean(Sex == "M") * 100,
+    percent_female = mean(Sex == "F") * 100,
+    percent_bull = mean(Sex == "B") * 100,
+    percent_dairy = mean(Beef_or_Dairy == "Dairy") * 100,
+    percent_beef = mean(Beef_or_Dairy == "Beef") * 100,
+    mean_total_conditions = mean(as.integer(Total_Conditions_per_Animal)),
+  percent_healthy_animals = sum(Total_Conditions_per_Animal==0) / number_of_animals *100) %>%
+  arrange(desc(number_of_animals))
+total_conditions_summary
+```
+
+
+
+
 Total conditions per animal histogram
 ```{r}
 total_conditions_hist <- ggplot(combined_data_without_outliers, aes(x=Total_Conditions_per_Animal))  + scale_y_continuous(trans='log10') +
@@ -1198,11 +1273,153 @@ ggsave("./data/combined_figs/total_conditions_hist_by_production.png", plot=tota
 
 
 ### Temperature
+```{r}
+
+aggregate(T_2M ~ Sex + Beef_or_Dairy + Abattoir_._Died_on_Farm, combined_data_without_outliers, mean)
+```
 
 ```{r}
-combined_data_without_outliers
+low_temperatures <- combined_data_without_outliers %>%
+  filter(T_2M < 6.05) %>%
+  summarise(
+    number_of_animals = n(),
+    mean_age = mean(days_alive),
+    percent_of_total_animals = n() * 100/ total_animals_no_outliers,
+    percent_male = mean(Sex == "M") * 100,
+    percent_female = mean(Sex == "F") * 100,
+    percent_bull = mean(Sex == "B") * 100,
+    Abattoir_deaths = 100 * sum(Abattoir_._Died_on_Farm == "Abattoir") / n(),
+    Farm_deaths = 100 * sum(Abattoir_._Died_on_Farm == "Died on Farm") / n(),
+    mean_total_conditions = mean(as.integer(Total_Conditions_per_Animal)),
+  percent_healthy_animals = sum(Total_Conditions_per_Animal==0) / number_of_animals *100) %>%
+  arrange(desc(number_of_animals))
+medium_temperatures <- combined_data_without_outliers %>%
+  filter(T_2M >= 6.05 & T_2M <= 12.760) %>%
+  summarise(
+    mean_age = mean(days_alive),
+    percent_of_total_animals = n() * 100/ total_animals_no_outliers,
+    percent_male = mean(Sex == "M") * 100,
+    percent_female = mean(Sex == "F") * 100,
+    percent_bull = mean(Sex == "B") * 100,
+    Abattoir_deaths = 100 * sum(Abattoir_._Died_on_Farm == "Abattoir") / n(),
+    Farm_deaths = 100 * sum(Abattoir_._Died_on_Farm == "Died on Farm") / n(),
+    mean_total_conditions = mean(as.integer(Total_Conditions_per_Animal)),
+    number_of_animals = n(),
+  percent_healthy_animals = sum(Total_Conditions_per_Animal==0) / number_of_animals *100) %>%
+  arrange(desc(number_of_animals))
+high_temperatures <- combined_data_without_outliers %>%
+  filter(T_2M > 12.760) %>%
+  summarise(
+    mean_age = mean(days_alive),
+    percent_of_total_animals = n() * 100/ total_animals_no_outliers,
+    percent_male = mean(Sex == "M") * 100,
+    percent_female = mean(Sex == "F") * 100,
+    percent_bull = mean(Sex == "B") * 100,
+    Abattoir_deaths = 100 * sum(Abattoir_._Died_on_Farm == "Abattoir") / n(),
+    Farm_deaths = 100 * sum(Abattoir_._Died_on_Farm == "Died on Farm") / n(),
+    mean_total_conditions = mean(as.integer(Total_Conditions_per_Animal)),
+    number_of_animals = n(),
+  percent_healthy_animals = sum(Total_Conditions_per_Animal==0) / number_of_animals *100) %>%
+  arrange(desc(number_of_animals))
+
+temperature_summary <- rbind(low_temperatures, medium_temperatures, high_temperatures)
+temperature_summary
+
+```
+```{r}
+combined_data_without_outliers %>%
+  group_by(Beef_or_Dairy) %>%
+  filter(T_2M < 6.05) %>%
+  summarise(animals= n(),
+    mean_age = mean(days_alive))
+
+combined_data_without_outliers %>%
+  group_by(Beef_or_Dairy) %>%
+  filter(T_2M >= 6.05 & T_2M <= 12.76) %>%
+  summarise(animals= n(),
+            mean_age = mean(days_alive))
+
+combined_data_without_outliers %>%
+  group_by(Beef_or_Dairy) %>%
+  filter(T_2M > 12.76) %>%
+  summarise(animals= n(),
+    mean_age = mean(days_alive))
+```
+
+
+```{r}
+low_rh <- combined_data_without_outliers %>%
+  filter(RH2M < 86.00) %>%
+  summarise(
+    number_of_animals = n(),
+    mean_age = mean(days_alive),
+    percent_of_total_animals = n() * 100/ total_animals_no_outliers,
+    percent_male = mean(Sex == "M") * 100,
+    percent_female = mean(Sex == "F") * 100,
+    percent_bull = mean(Sex == "B") * 100,
+    Abattoir_deaths = 100 * sum(Abattoir_._Died_on_Farm == "Abattoir") / n(),
+    Farm_deaths = 100 * sum(Abattoir_._Died_on_Farm == "Died on Farm") / n(),
+    mean_total_conditions = mean(as.integer(Total_Conditions_per_Animal)),
+  percent_healthy_animals = sum(Total_Conditions_per_Animal==0) / number_of_animals *100) %>%
+  arrange(desc(number_of_animals))
+medium_rh <- combined_data_without_outliers %>%
+  filter(RH2M >= 86.00 & T_2M <= 92) %>%
+  summarise(
+    mean_age = mean(days_alive),
+    percent_of_total_animals = n() * 100/ total_animals_no_outliers,
+    percent_male = mean(Sex == "M") * 100,
+    percent_female = mean(Sex == "F") * 100,
+    percent_bull = mean(Sex == "B") * 100,
+    Abattoir_deaths = 100 * sum(Abattoir_._Died_on_Farm == "Abattoir") / n(),
+    Farm_deaths = 100 * sum(Abattoir_._Died_on_Farm == "Died on Farm") / n(),
+    mean_total_conditions = mean(as.integer(Total_Conditions_per_Animal)),
+    number_of_animals = n(),
+  percent_healthy_animals = sum(Total_Conditions_per_Animal==0) / number_of_animals *100) %>%
+  arrange(desc(number_of_animals))
+high_rh <- combined_data_without_outliers %>%
+  filter(RH2M > 92) %>%
+  summarise(
+    mean_age = mean(days_alive),
+    percent_of_total_animals = n() * 100/ total_animals_no_outliers,
+    percent_male = mean(Sex == "M") * 100,
+    percent_female = mean(Sex == "F") * 100,
+    percent_bull = mean(Sex == "B") * 100,
+    Abattoir_deaths = 100 * sum(Abattoir_._Died_on_Farm == "Abattoir") / n(),
+    Farm_deaths = 100 * sum(Abattoir_._Died_on_Farm == "Died on Farm") / n(),
+    mean_total_conditions = mean(as.integer(Total_Conditions_per_Animal)),
+    number_of_animals = n(),
+  percent_healthy_animals = sum(Total_Conditions_per_Animal==0) / number_of_animals *100) %>%
+  arrange(desc(number_of_animals))
+
+rh_summary <- rbind(low_temperatures, medium_temperatures, high_temperatures)
+rh_summary
+```
+
+```{r}
+combined_data_without_outliers %>%
+  group_by(Beef_or_Dairy) %>%
+  filter(RH2M < 86.00) %>%
+  summarise(animals= n(),
+    mean_age = mean(days_alive))
+
+combined_data_without_outliers %>%
+  group_by(Beef_or_Dairy) %>%
+  filter(RH2M >= 86.00 & T_2M <= 92.00) %>%
+  summarise(animals= n(),
+            mean_age = mean(days_alive))
+
+combined_data_without_outliers %>%
+  group_by(Beef_or_Dairy) %>%
+  filter(RH2M > 92.00) %>%
+  summarise(animals= n(),
+    mean_age = mean(days_alive))
+```
+
+```{r}
+
 summary(combined_data_without_outliers[, "T_2M"])
 
+summary(combined_data_without_outliers[, "RH2M"])
 ```
 
 
@@ -1220,6 +1437,22 @@ temperature_hist <- ggplot(combined_data_without_outliers, aes(x=T_2M)) +
 temperature_hist
 ggsave("./data/combined_figs/temperature_hist.png", plot=temperature_hist, width=8, height = 6)
 ```
+
+
+```{r}
+temperature_scatter_plot <- ggplot(combined_data_without_outliers, aes(x=T_2M, y=days_alive, colour = Sex)) + geom_point()
+ggsave("./data/combined_figs/temperature_scatter_plot.png", plot=temperature_scatter_plot, width=8, height = 6)
+temperature_scatter_plot
+```
+
+#RH2M
+
+```{r}
+humidity_ratio_scatter_plot <- ggplot(combined_data_without_outliers, aes(x=RH2M, y=days_alive, colour = Sex)) + geom_point()
+ggsave("./data/combined_figs/humidity_ratio_scatter_plot.png", plot=temperature_scatter_plot, width=8, height = 6)
+humidity_ratio_scatter_plot
+```
+
 
 ```{r}
 library(e1071)
@@ -1290,11 +1523,88 @@ ggsave("./data/combined_figs/temperature_by_production_deaths.png", plot=tempera
 
 
 ### Condition columns
+# keep only the unhealthy animals
+```{r}
+colSums(unhealthy[, 21:92])
+```
+
+```{r}
+unhealthy <- combined_data_without_outliers %>%
+  filter(Total_Conditions_per_Animal>0)
+unhealthy
+sum(unhealthy$TB)
+conditions_names <- colnames(unhealthy[21:92])
+conditions_names
+conditions_names[colSums(unhealthy[, 21:92]) > 1000]
+
+summary(colSums(unhealthy[, 21:92]))
+print("we 18 have conditions that are extremely rare such as:")
+conditions_names[colSums(unhealthy[, 21:92]) < 16 ]
+
+print("some conditions are more often but again not so much:" )
+conditions_names[colSums(unhealthy[, 21:92]) > 16 & colSums(unhealthy[, 21:92]) <= 3952]
+
+print("some conditions are more common:" )
+conditions_names[colSums(unhealthy[, 21:92]) > 3952]
+
+```
+
+# Create data frame for all conditions
+```{r}
+conditions_list <- colnames(unhealthy[21:92])
+num_conditions <- length(conditions_list)
+
+
+all_conditions_df <- data_frame()
+
+for (i in 1:num_conditions) {
+  condition <- conditions_list[i]
+  condition_slice <- unhealthy %>%
+    filter(unhealthy[condition]>0) %>%
+    summarise(animals = n(),
+              mean_age = mean(days_alive),
+              prcnt_male = mean(Sex == "M") * 100, 
+              prcnt_female = mean(Sex == "F") * 100, 
+              prcnt_bull = mean(Sex == "B") * 100, 
+              prcnt_beef = mean(Beef_or_Dairy == "Beef") * 100, 
+              prcnt_dairy = mean(Beef_or_Dairy == "Dairy") * 100, 
+              prcnt_abattoir = mean(Abattoir_._Died_on_Farm == "Abattoir") * 100, 
+              prcnt_farm = mean(Abattoir_._Died_on_Farm == "Died on Farm") * 100)
+  row.names(condition_slice) <- condition
+  all_conditions_df <- rbind(all_conditions_df, condition_slice)
+}
+all_conditions_df %>%
+  arrange(desc(animals))
+summary(all_conditions_df$mean_age)
+all_conditions_df[all_conditions_df$mean_age >2000,]]
+summary(unhealthy$days_alive)
+```
+
+```{r}
+unhealthy %>%
+  filter(Abattoir_._Died_on_Farm == "Died on Farm")
+```
+
+```{r}
+unhealthy_hist <- ggplot(unhealthy, aes(x=days_alive)) +
+  geom_histogram(binwidth=1, fill="steelblue") +
+  geom_vline(aes(xintercept= mean(days_alive), color="red")) +
+  labs(title="Age in days for unhealthy animals", x="Days", y="Animals") +
+  theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+        axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+        axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+        axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+        panel.background = element_rect(fill = "transparent"), # bg of the panel
+        plot.background = element_rect(fill = "transparent", color = NA)) 
+unhealthy_hist
+ggsave("./data/combined_figs/unhealthy_hist.png", plot=unhealthy_hist, width=8, height = 6)
+```
+
 
 ```{r}
 combined_data_conditions <- combined_data_without_outliers[, 20:92] %>%
   colSums()
-
+combined_data_conditions
 conditions_df <- data.frame(conditions=c(colnames(combined_data_without_outliers[20:92])),
                             frequency=c(combined_data_conditions))
 rownames(conditions_df) <- NULL
@@ -1328,8 +1638,6 @@ ggplot(top_conditions_without_no, aes(x = conditions, y = frequency)) +
 
 
 
-
-##### change all code for new data
 
 ```{r}
 long_survival_data <- read.csv("./data/data_long.csv")
