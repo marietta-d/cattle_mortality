@@ -1,0 +1,148 @@
+---
+title: "distance_between_distributions"
+author: "Marietta_Dalamanga"
+date: "2024-07-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(survival)
+library(survminer)
+library(data.table)
+library(ggplot2)
+library(ggpubr)
+```
+
+
+```{r}
+common_conditions_breed_data <- read.csv("./data/common_conditions_breed_data.csv")
+```
+
+
+```{r}
+# Sex is categorical {M, F, B}
+male_slice <- common_conditions_breed_data %>%
+  filter(Sex == "M")
+female_slice <- common_conditions_breed_data %>%
+  filter(Sex == "F")
+bull_slice <- common_conditions_breed_data %>%
+  filter(Sex == "B")
+
+cdf_male_slice <- ecdf(male_slice$days_alive)
+cdf_female_slice <- ecdf(female_slice$days_alive)
+cdf_bull_slice <- ecdf(bull_slice$days_alive)
+
+num_x_points <- 1000
+q099 <- quantile(cdf_male_slice, 0.99)  |> as.numeric()
+dF <- -1
+x_step <- q099/num_x_points
+for (i in 1:num_x_points) {
+  xi <- x_step * i
+  dF <- max(dF, abs(cdf_male_slice(xi) - cdf_female_slice(xi)))
+}
+print(dF)
+
+```
+
+
+```{r}
+total_variation <- function(dst1, dst2) {
+  num_x_points <- 1000
+  q099 <- quantile(dst1, 0.99)  |> as.numeric()
+  dF <- -1
+  x_step <- q099/num_x_points
+  for (i in 1:num_x_points) {
+    xi <- x_step * i
+    dF <- max(dF, abs(dst1(xi) - dst2(xi)))
+  }
+  return(dF)
+}
+```
+
+
+```{r}
+conditions_list <- colnames(common_conditions_breed_data[21:44])
+num_conditions <- length(conditions_list)
+
+for (i in 1:num_conditions) {
+  bvar_name <- conditions_list[i]
+  bvar_1_slice <- common_conditions_breed_data %>% filter(common_conditions_breed_data[bvar_name] == 1)
+  bvar_0_slice <- common_conditions_breed_data %>% filter(common_conditions_breed_data[bvar_name] == 0)
+  cdf_bvar_0 <- ecdf(bvar_0_slice$days_alive)
+  cdf_bvar_1 <- ecdf(bvar_1_slice$days_alive)
+  print(paste(bvar_name, total_variation(cdf_bvar_0, cdf_bvar_1)))
+}
+```
+
+categorical variables
+```{r}
+colnames(common_conditions_breed_data)
+```
+
+
+```{r}
+dvo_list <- unique(common_conditions_breed_data$Dvo_Code)
+
+slice1 <- common_conditions_breed_data %>%
+  filter(Dvo_Code== dvo_list[1])
+slice2 <- common_conditions_breed_data %>%
+  filter(Dvo_Code== dvo_list[2])
+slice3 <- common_conditions_breed_data %>%
+  filter(Dvo_Code== dvo_list[3])
+slice4 <- common_conditions_breed_data %>%
+  filter(Dvo_Code== dvo_list[4])
+slice5 <- common_conditions_breed_data %>%
+  filter(Dvo_Code== dvo_list[5])
+slice6 <- common_conditions_breed_data %>%
+  filter(Dvo_Code== dvo_list[6])
+slice7 <- common_conditions_breed_data %>%
+  filter(Dvo_Code== dvo_list[7])
+slice8 <- common_conditions_breed_data %>%
+  filter(Dvo_Code== dvo_list[8])
+slice9 <- common_conditions_breed_data %>%
+  filter(Dvo_Code== dvo_list[9])
+slice10 <- common_conditions_breed_data %>%
+  filter(Dvo_Code== dvo_list[10])
+
+cdf_slice1 <- ecdf(slice1$days_alive)
+cdf_slice2 <- ecdf(slice2$days_alive)
+cdf_slice3 <- ecdf(slice3$days_alive)
+cdf_slice4 <- ecdf(slice4$days_alive)
+cdf_slice5 <- ecdf(slice5$days_alive)
+cdf_slice6 <- ecdf(slice6$days_alive)
+cdf_slice7 <- ecdf(slice7$days_alive)
+cdf_slice8 <- ecdf(slice8$days_alive)
+cdf_slice9 <- ecdf(slice9$days_alive)
+cdf_slice10 <- ecdf(slice10$days_alive)
+
+
+
+
+num_x_points <- 1000
+q099 <- quantile(cdf_slice1, 0.99)  |> as.numeric()
+dF <- -1
+x_step <- q099/num_x_points
+for (i in 1:num_x_points) {
+  xi <- x_step * i
+  dF <- max(dF, abs(cdf_slice1(xi) - cdf_slice10(xi)))
+}
+print(dF)
+
+```
+
+
+
+
+
+
+

@@ -24,21 +24,19 @@ library(ggpubr)
 
 
 ```{r}
-survival_data_without_outliers <- read.csv("./data/combined_data_without_outliers.csv")
 
+survival_data <- read.csv("./data/common_conditions_breed_data.csv")
 ```
 
 ```{r}
-colnames(survival_data_without_outliers)
+colnames(survival_data)
 ```
 
 ### Baseline survival curve
 years
 ```{r}
-
-baseline_survival_fit <- survfit(Surv(years_alive, status) ~ 1, data = survival_data_without_outliers)
+baseline_survival_fit <- survfit(Surv(years_alive, status) ~ 1, data = survival_data)
 summary(baseline_survival_fit)$table
-
 ```
 
 ```{r}
@@ -71,8 +69,9 @@ ggsave("./data/combined_figs/risk_table_of_baseline_sirvival.png", plot=km_basel
 Days
 ```{r}
 
-baseline_survival_fit_days <- survfit(Surv(days_alive, status) ~ 1, data = survival_data_without_outliers)
-summary(baseline_survival_fit)$table
+baseline_survival_fit_days <- survfit(Surv(days_alive, status) ~ 1, data = survival_data)
+
+summary(baseline_survival_fit_days)$table
 
 ```
 
@@ -111,9 +110,7 @@ ggsave("./data/combined_figs/risk_table_of_baseline_sirvival_days.png", plot=km_
 
 years
 ```{r}
-
-sex_fit_years <- survfit(Surv(years_alive, status) ~ Sex, data=survival_data_without_outliers)
-                     
+sex_fit_years <- survfit(Surv(years_alive, status) ~ Sex, data=survival_data)
 ```
 
 
@@ -156,7 +153,7 @@ km_sex_years
 days
 ```{r}
 
-sex_fit_days <- survfit(Surv(days_alive, status) ~ Sex, data=survival_data_without_outliers)
+sex_fit_days <- survfit(Surv(days_alive, status) ~ Sex, data=survival_data)
                      
 ```
 
@@ -202,7 +199,7 @@ km_sex_days
 years
 ```{r}
 
-place_of_death_fit_years <- survfit(Surv(years_alive, status) ~ Abattoir_._Died_on_Farm, data=survival_data_without_outliers)
+place_of_death_fit_years <- survfit(Surv(years_alive, status) ~ Abattoir_._Died_on_Farm, data=survival_data)
                      
 ```
 
@@ -246,7 +243,7 @@ km_place_of_death_years
 days
 ```{r}
 
-place_of_death_fit_days <- survfit(Surv(days_alive, status) ~ Abattoir_._Died_on_Farm, data=survival_data_without_outliers)
+place_of_death_fit_days <- survfit(Surv(days_alive, status) ~ Abattoir_._Died_on_Farm, data=survival_data)
                      
 ```
 
@@ -292,7 +289,7 @@ Type of production
 years
 ```{r}
 
-production_fit_years <- survfit(Surv(years_alive, status) ~ Beef_or_Dairy, data=survival_data_without_outliers)
+production_fit_years <- survfit(Surv(years_alive, status) ~ Beef_or_Dairy, data=survival_data)
                      
 ```
 
@@ -337,7 +334,7 @@ km_production_years
 days
 ```{r}
 
-production_fit_days <- survfit(Surv(days_alive, status) ~ Beef_or_Dairy, data=survival_data_without_outliers)
+production_fit_days <- survfit(Surv(days_alive, status) ~ Beef_or_Dairy, data=survival_data)
                      
 ```
 
@@ -382,16 +379,16 @@ years
 ```{r}
 
 
-subset_of_conditions_1_2_3 <- survival_data_without_outliers %>%
-  subset(survival_data_without_outliers$Total_Conditions_per_Animal==1 |survival_data_without_outliers$Total_Conditions_per_Animal==2 | survival_data_without_outliers$Total_Conditions_per_Animal==3)
+subset_of_conditions_1_2_3 <- survival_data %>%
+  subset(survival_data$Total_Conditions_per_Animal==1 |survival_data$Total_Conditions_per_Animal==2 | survival_data$Total_Conditions_per_Animal==3)
 
-subset_of_conditions_4_5_6 <- survival_data_without_outliers %>%
-  subset(survival_data_without_outliers$Total_Conditions_per_Animal==4 |survival_data_without_outliers$Total_Conditions_per_Animal==5 | survival_data_without_outliers$Total_Conditions_per_Animal==6)
+subset_of_conditions_4_5_6 <- survival_data %>%
+  subset(survival_data$Total_Conditions_per_Animal==4 |survival_data$Total_Conditions_per_Animal==5 | survival_data$Total_Conditions_per_Animal==6)
 
-subset_of_conditions_7_8_9 <- survival_data_without_outliers %>%
-  subset(survival_data_without_outliers$Total_Conditions_per_Animal==7 |survival_data_without_outliers$Total_Conditions_per_Animal==8 | survival_data_without_outliers$Total_Conditions_per_Animal==9)
+subset_of_conditions_7_8_9 <- survival_data %>%
+  subset(survival_data$Total_Conditions_per_Animal==7 |survival_data$Total_Conditions_per_Animal==8 | survival_data$Total_Conditions_per_Animal==9)
 
-total_conditions_fit_years <- survfit(Surv(years_alive, status) ~ Total_Conditions_per_Animal, data=survival_data_without_outliers)
+total_conditions_fit_years <- survfit(Surv(years_alive, status) ~ Total_Conditions_per_Animal, data=survival_data)
 subset_conditions_fit_years_1_2_3<- survfit(Surv(years_alive, status) ~ Total_Conditions_per_Animal, data=subset_of_conditions_1_2_3)
 subset_conditions_fit_years_4_5_6<- survfit(Surv(years_alive, status) ~ Total_Conditions_per_Animal, data=subset_of_conditions_4_5_6)
 subset_conditions_fit_years_7_8_9<- survfit(Surv(years_alive, status) ~ Total_Conditions_per_Animal, data=subset_of_conditions_7_8_9)
@@ -469,7 +466,7 @@ subset_3_total_conditions_years
 days
 ```{r}
 
-total_conditions_fit_days <- survfit(Surv(days_alive, status) ~ Total_Conditions_per_Animal, data=survival_data_without_outliers)
+total_conditions_fit_days <- survfit(Surv(days_alive, status) ~ Total_Conditions_per_Animal, data=survival_data)
                      
 ```
 
@@ -567,7 +564,7 @@ DVO_code
 years
 ```{r}
 
-DVO_fit_years <- survfit(Surv(years_alive, status) ~ Dvo_Code, data=survival_data_without_outliers)
+DVO_fit_years <- survfit(Surv(years_alive, status) ~ Dvo_Code, data=survival_data)
                      
 ```
 
@@ -610,7 +607,7 @@ km_DVO_years
 days
 ```{r}
 
-DVO_fit_days <- survfit(Surv(days_alive, status) ~ Dvo_Code, data=survival_data_without_outliers)
+DVO_fit_days <- survfit(Surv(days_alive, status) ~ Dvo_Code, data=survival_data)
                      
 ```
 
@@ -656,7 +653,7 @@ km_DVO_days
 Conditions
 years
 ```{r}
-condition_columns <- c(colnames(survival_data_without_outliers))
+condition_columns <- c(colnames(survival_data))
 condition_columns[21:93]
                      
 ```
@@ -664,8 +661,8 @@ condition_columns[21:93]
 
 ```{r}
 
-surv_obj_days <- Surv(time = survival_data_without_outliers$days_alive, event = survival_data_without_outliers$status)
-surv_obj_years <- Surv(time = survival_data_without_outliers$years_alive, event = survival_data_without_outliers$status)
+surv_obj_days <- Surv(time = survival_data$days_alive, event = survival_data$status)
+surv_obj_years <- Surv(time = survival_data$years_alive, event = survival_data$status)
 
 ```
 
@@ -706,8 +703,8 @@ condition_columns <- c("No", "SEPTICAEMIA", "ENDOCARDITIS", "TELANGECTASIS",
 for (i in 2:73) {
   # Fit survival models for the condition
   condition_name <- condition_columns[i]
-  fit_days <- survfit(surv_obj_days ~ survival_data_without_outliers[[condition_name]])
-  fit_years <- survfit(surv_obj_years ~ survival_data_without_outliers[[condition_name]])
+  fit_days <- survfit(surv_obj_days ~ survival_data[[condition_name]])
+  fit_years <- survfit(surv_obj_years ~ survival_data[[condition_name]])
   
   # Create plots for days
   plot_days <- ggsurvplot(
@@ -731,7 +728,7 @@ for (i in 2:73) {
 One hot encoding for breed
 ```{r}
 # Create a column for each unique breed
-breed_wide_data <- survival_data_without_outliers %>%
+breed_wide_data <- survival_data %>%
   mutate(BreedPresent = 1) %>%
   pivot_wider(names_from = Breed, values_from = BreedPresent, values_fill = list(ConditionPresent = 0))
 ```
@@ -797,13 +794,13 @@ Plot the curves for top 6 breeds
 
 ```{r}
 N <- 6
-top_6_breeds <- survival_data_without_outliers %>%
+top_6_breeds <- survival_data %>%
   count(Breed, sort=TRUE) %>%
   top_n(N, n) %>%
   pull(Breed)
 
 
-filtered_top_6_breeds <- survival_data_without_outliers %>%
+filtered_top_6_breeds <- survival_data %>%
   filter(Breed %in% top_6_breeds)
 
 
