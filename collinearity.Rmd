@@ -20,13 +20,13 @@ library(MASS)
 
 Check the collinearity
 ```{r}
-data <- read.csv("./data/filtered_conditions_breeds.csv")
+data <- read.csv("./data/combined_data_without_outliers.csv")
 head(data)
 colnames(data)
 ```
 
 ```{r}
-data_collinearity <- data[c(2, 7, 8, 9, 12, 13, 14, 16, 19:48)]
+data_collinearity <- data[c(1, 6:8, 11:13, 15)]
 colnames(data_collinearity)
 ```
 

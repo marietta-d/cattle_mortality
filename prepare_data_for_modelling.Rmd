@@ -24,73 +24,81 @@ memory.limit(size=70000)
 ```
 
 ```{r}
-conditions_wide_data <- read.csv("./data/combined_data_without_outliers.csv")
+survival_data_without_outliers <- read.csv("./data/combined_data_without_outliers.csv")
 ```
 
 # keep only conditions with more than 1000 animals
-We will keep the animal and it will seem like it doesn't have any conditions I can say that it doesn't have any of the common conditions
+We will keep only the animals with common condition
+
+
 ```{r}
-colnames(conditions_wide_data)
-conditions_columns <- c(colnames(conditions_wide_data[21:93]))
+colnames(survival_data_without_outliers)
+conditions_columns <- colnames(survival_data_without_outliers[21:92])
 conditions_columns
-conditions_sums <- colSums(conditions_wide_data[, conditions_columns])
-filter_rare_conditions_columns <- conditions_columns[conditions_sums < 1000]
-filter_rare_conditions_columns
+conditions_sums <- colSums(survival_data_without_outliers[, conditions_columns])
+conditions_sums
+rare_conditions_columns <- c(conditions_columns[conditions_sums < 2000])
+rare_conditions_columns
 
 ```
 keep only those columns
 
 ```{r}
-conditions_wide_data
-filtered_rare_conditions <- select(conditions_wide_data, -c(filter_rare_conditions_columns))
+filtered_rare_conditions <- survival_data_without_outliers
+filtered_rare_conditions[rare_conditions_columns] <- list(NULL)
 filtered_rare_conditions
 ```
 
-If I want to delete those rows where the animal has only rare conditions
+Delete those rows where the animal has only rare conditions
 ```{r}
-colnames(filtered_rare_conditions)
-animals_only_rare_conditions <- rowSums(filtered_rare_conditions[, 21:48]) ==0
-sum(animals_only_rare_conditions)
-animals_only_rare_conditions
-keep <- c(!animals_only_rare_conditions)
+rare_conditions_data <- filtered_rare_conditions %>%
+  filter(Total_Conditions_per_Animal > 0 & rowSums(filtered_rare_conditions[21:44]) == 0) 
+common_conditions_data <- filtered_rare_conditions %>%
+  filter(Total_Conditions_per_Animal== 0 | rowSums(filtered_rare_conditions[21:44]) >0 ) 
+  
 ```
-I will delete 1462 entries where the animals don't have any of the common conditions
+I will delete 2693 entries where the animals don't have any of the common conditions
 
 ```{r}
-condition_filtered_data <- filtered_rare_conditions[keep, ]
-condition_filtered_data
-total_animals <- as.numeric(nrow(condition_filtered_data))
+common_conditions_data
 ```
 
 # Now we will delete those rows that the animals belong to a rare breed 
 
 ```{r}
 N <- 8
-top_breeds <- condition_filtered_data %>%
+top_breeds <- common_conditions_data %>%
   count(Breed, sort=TRUE) %>%
   top_n(N, n) %>%
   pull(Breed)
 
-
-filtered_condition_breeds <- condition_filtered_data %>%
+top_breeds
+common_conditions_breed_data <- common_conditions_data %>%
   filter(Breed %in% top_breeds)
 
-nrow(filtered_condition_breeds)/total_animals * 100
+nrow(common_conditions_breed_data)/nrow(common_conditions_data)* 100
 ```
 Top 8 breeds account for the 91.50% of the animals
 We will keep only those
-171019 rows were removed this is the 8.5% of our condition_filtered_dataset
+171019 rows were removed this is the 8.5% of our common_conditions_data
 ```{r}
-(nrow(condition_filtered_data)-nrow(filtered_condition_breeds)) / total_animals *100
+(nrow(common_conditions_data)-nrow(common_conditions_breed_data)) / total_animals_no_outliers *100
 ```
 
+```{r}
+common_conditions_breed_data
+```
 
 save dataset in a csv_file to use it for parametric distributions
 ```{r}
-write.csv(filtered_condition_breeds, "./data/filtered_conditions_breeds.csv", row.names = FALSE)
+write.csv(common_conditions_breed_data, "./data/common_conditions_breed_data.csv", row.names = FALSE)
 ```
 
 
+
+
+
+##### all code below was for one hot encoding and split dataset. It is not longer used  ####
 delete column that I will not use in modelling
 these are: first index column, year, month, animal_is, Dob, Dod, days_alive and years_alive
 We will keep the animal Id until the end of our data preparation

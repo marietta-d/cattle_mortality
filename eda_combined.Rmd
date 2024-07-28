@@ -1655,6 +1655,9 @@ ggqqplot(combined_data_without_outliers, x = "days_alive",
    color = "Sex", 
    ggtheme = theme_pubclean())
 ```
-```
 
+save combined_data_without_outliers
+```{r}
+write.csv(combined_data_without_outliers, file="./data/combined_data_without_outliers.csv", row.names = FALSE)
+```
 
