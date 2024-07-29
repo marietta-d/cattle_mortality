@@ -443,6 +443,7 @@ dvo_all$Dvo_Code <- as.character(dvo_all$Dvo_Code)
 dvo <- levels(survival_data$Dvo_Code)
 
 for(i in 1:length(dvo)){
+  dvo_renamed <- dvo_all
   dvo_renamed$Dvo_Code[dvo_renamed$Dvo_Code==dvo[i]] <- dvo[i]
   dvo_renamed$Dvo_Code[dvo_renamed$Dvo_Code != dvo[i]] <- "other"
   dvo_vs_other <- survfit(survival_object ~ Dvo_Code, data = dvo_renamed)
@@ -500,34 +501,90 @@ breed_all <- survival_data
 breed_all$Breed <- as.character(breed_all$Breed)
 breeds <- levels(survival_data$Breed)
 
-for(i in 1:length(dvo)){
-  dvo_renamed$Dvo_Code[dvo_renamed$Dvo_Code==dvo[i]] <- dvo[i]
-  dvo_renamed$Dvo_Code[dvo_renamed$Dvo_Code != dvo[i]] <- "other"
-  dvo_vs_other <- survfit(survival_object ~ Dvo_Code, data = dvo_renamed)
-  print(summary(dvo_vs_other)$table)
+for(i in 1:length(breeds)){
+  breeds_renamed <- breed_all
+  breeds_renamed$Breed[breeds_renamed$Breed==breeds[i]] <- breeds[i]
+  breeds_renamed$Breed[breeds_renamed$Breed !=breeds[i]] <- "other"
+  breed_vs_other <- survfit(survival_object ~ Breed, data = breeds_renamed)
+  print(summary(breed_vs_other)$table)
   
   plot_days <- ggsurvplot(
-    dvo_vs_other,
-    data = dvo_renamed,
+    breed_vs_other,
+    data = breeds_renamed,
     pval = TRUE,
     conf.int = TRUE,
     risk.table = TRUE,
-    title = paste("Survival Curve for", dvo[i], "(Days)"),
+    title = paste("Survival Curve for", breeds[i], "(Days)"),
     xlab = "Time (Days)",
     ylab = "Survival Probability"
   )
   
   print(plot_days)
-  ggsave(paste("./data/combined_figs/byDvo/",dvo[i],".png", sep = ""), plot=plot_days$plot, width = 8, height = 6)
+  ggsave(paste("./data/combined_figs/byBreedNew/",breeds[i],".png", sep = ""), plot=plot_days$plot, width = 8, height = 6)
   
-  dvo_renamed <- dvo_all
+  breeds_renamed <- breed_all
   }
 
 
 ```
 
+Abattoir
+```{r}
+
+Abattoir_fit_days <- survfit(Surv(days_alive, status) ~ Abbatoir, data=survival_data)
+summary(Abattoir_fit_days)$table
+Abattoir_fit_health <- survfit(Surv(days_alive, status) ~ Abbatoir + Health_status, data=dat_all)
+summary(Abattoir_fit_health)$table
+```
 
 
+```{r}
+ km_abatoirs_days <- ggsurvplot(Abattoir_fit_days,
+                           data = survival_data,
+                           pval = TRUE,
+                           conf.int = TRUE,
+                           risk.table = TRUE,
+                           title = "Survival Curve for all abattoirs, (Days)",
+    xlab = "Time (Days)",
+    ylab = "Survival Probability",
+    legend.labs = c(levels(survival_data$Abbatoir))
+  )
+ggsave("./data/combined_figs/km_abattoir_days.png", plot=km_abatoirs_days$plot, width = 8, height = 6)
+ggsave("./data/combined_figs/km_abattoir_days.png", plot=km_abatoirs_days$table)
+km_abatoirs_days
+```
+
+```{r}
+abattoir_all <- survival_data
+abattoir_all$Abbatoir <- as.character(abattoir_all$Abbatoir)
+abattoirs <- levels(survival_data$Abbatoir)
+
+for(i in 1:length(abattoirs)){
+  abattoir_renamed <- abattoir_all
+  abattoir_renamed$Abbatoir[abattoir_renamed$Abbatoir==abattoirs[i]] <- abattoirs[i]
+  abattoir_renamed$Abbatoir[abattoir_renamed$Abbatoir !=abattoirs[i]] <- "other"
+  abattoir_vs_other <- survfit(survival_object ~ Abbatoir, data = abattoir_renamed)
+  print(summary(abattoir_vs_other)$table)
+  
+  plot_days <- ggsurvplot(
+    abattoir_vs_other,
+    data = abattoir_renamed,
+    pval = TRUE,
+    conf.int = TRUE,
+    risk.table = TRUE,
+    title = paste("Survival Curve for", abattoirs[i], "(Days)"),
+    xlab = "Time (Days)",
+    ylab = "Survival Probability"
+  )
+  
+  print(plot_days)
+  ggsave(paste("./data/combined_figs/byAbattoir/",abattoirs[i],".png", sep = ""), plot=plot_days$plot, width = 8, height = 6)
+  
+  abattoir_renamed <- abattoir_all
+  }
+
+
+```
 
 
 
