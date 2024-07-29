@@ -15,14 +15,16 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(dplyr)
 library(tidyr)
-library(survival)
-library(survminer)
-library(data.table)
 library(ggplot2)
 library(ggpubr)
+library(survminer)
+library(survival)
+library(data.table)
+library(coin)
+
 ```
 
-
+The data we will use is the dataset with the most common conditions (conditions found on more than 2000 animals) and breeds(8 breeds account for the 91.5% of all animals)
 ```{r}
 
 survival_data <- read.csv("./data/common_conditions_breed_data.csv")
@@ -32,67 +34,77 @@ survival_data <- read.csv("./data/common_conditions_breed_data.csv")
 colnames(survival_data)
 ```
 
+All categorical variables as factor
+```{r}
+survival_data[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy")] = 
+  lapply(survival_data[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy")],
+                                function(x) as.factor(x))
+```
+
+```{r}
+healthy_data <- survival_data %>%
+  filter(Total_Conditions_per_Animal == 0)
+unhealthy_data <- survival_data %>%
+  filter((Total_Conditions_per_Animal >0))
+```
+
+We will perform Kaplan-Meier analysis on days alive
+
 ### Baseline survival curve
-years
-```{r}
-baseline_survival_fit <- survfit(Surv(years_alive, status) ~ 1, data = survival_data)
-summary(baseline_survival_fit)$table
-```
 
 ```{r}
-baseline_survival <- data.frame(time = baseline_survival_fit$time,
-                  n.risk = baseline_survival_fit$n.risk,
-                  n.event = baseline_survival_fit$n.event,
-                  n.censor = baseline_survival_fit$n.censor,
-                  surv = baseline_survival_fit$surv,
-                  upper = baseline_survival_fit$upper,
-                  lower = baseline_survival_fit$lower
-                  )
-baseline_survival
+survival_object <- Surv(survival_data$days_alive, survival_data$status)
+healthy_object <- Surv(healthy_data$days_alive, healthy_data$status)
+unhealthy_object <- Surv(unhealthy_data$days_alive, unhealthy_data$status)
 ```
 
+
 ```{r}
-km_baseline_years <- ggsurvplot(baseline_survival_fit,
-          pval = FALSE, conf.int = TRUE,
+# function to get the survival on different time points
+km_survival_time <- function(model_fit) {
+  survival_time  <- data.frame(time = model_fit$time,
+                                  n.risk = model_fit$n.risk,
+                                  n.event = model_fit$n.event,
+                                  n.censor = model_fit$n.censor,
+                                  surv = model_fit$surv,
+                                  upper = model_fit$upper,
+                                  lower = model_fit$lower)
+  return(survival_time)
+}
+
+```
+
+
+```{r}
+# function for plot
+curve <- function(model, var){
+  km_curve <- ggsurvplot(model,
+          pval = TRUE, 
+          conf.int = TRUE,
           risk.table = TRUE, # Add risk table
           surv.median.line = "hv", # Specify median survival
+          
           ggtheme = theme_bw()# Change ggplot2 theme
           )+
-  labs(title="Baseline survival in years", x="Years", y="Survival_probability") 
-km_baseline_years
-ggsave("./data/combined_figs/km_baseline_years.png", plot=km_baseline_years$plot, width = 8, height = 6)
-ggsave("./data/combined_figs/risk_table_of_baseline_sirvival.png", plot=km_baseline_years$table)
-```
-
-
-
-Days
-```{r}
-
-baseline_survival_fit_days <- survfit(Surv(days_alive, status) ~ 1, data = survival_data)
-
-summary(baseline_survival_fit_days)$table
+  labs(title=paste("Survival per", var, "in days"), x="Days", y="Survival_probability") 
+  return(km_curve)
+}
 
 ```
 
+Overall survival in days
+```{r}
+baseline_km_all_data <- survfit(survival_object ~ 1, data = survival_data)
+summary(baseline_km_all_data)$table
+```
 
 ```{r}
-baseline_survival_days <- data.frame(time = baseline_survival_fit_days$time,
-                  n.risk = baseline_survival_fit_days$n.risk,
-                  n.event = baseline_survival_fit_days$n.event,
-                  n.censor = baseline_survival_fit_days$n.censor,
-                  surv = baseline_survival_fit_days$surv,
-                  upper = baseline_survival_fit_days$upper,
-                  lower = baseline_survival_fit_days$lower
-                  )
-
-baseline_survival_days
+km_survival_time(baseline_km_all_data)
 ```
 
 
-
 ```{r}
-km_baseline_days <- ggsurvplot(baseline_survival_fit_days,
+km_baseline_days <- ggsurvplot(baseline_km_all_data,
           pval = FALSE, conf.int = TRUE,
           risk.table = TRUE, # Add risk table
           surv.median.line = "hv", # Specify median survival
@@ -100,97 +112,156 @@ km_baseline_days <- ggsurvplot(baseline_survival_fit_days,
           palette = "blue")+
   labs(title="Baseline survival in days", x="Days", y="Survival_probability") 
 km_baseline_days
-ggsave("./data/combined_figs/km_baseline_days.png", plot=km_baseline_years$plot, width = 8, height = 6)
-ggsave("./data/combined_figs/risk_table_of_baseline_sirvival_days.png", plot=km_baseline_days$table)
+ggsave("./data/combined_figs/baseline_km_all_data.png", plot=baseline_km_all_data$plot, width = 8, height = 6)
+ggsave("./data/combined_figs/risk_table_of_baseline_km_all_data.png", plot=baseline_km_all_data$table)
+```
+baseline survival for healthy and unhealthy animals
+
+```{r}
+baseline_km_healthy <- survfit(healthy_object ~ 1, data = healthy_data)
+baseline_km_unhealthy <- survfit(unhealthy_object ~ 1, data = unhealthy_data)
+summary(baseline_km_healthy)$table
+summary(baseline_km_unhealthy)$table
+```
+
+```{r}
+# all curves
+fit <- list(all = baseline_km_all_data, healthy = baseline_km_healthy, unhealthy=baseline_km_unhealthy)
+all_baseline_curves <- ggsurvplot(fit, data = survival_data, combine = TRUE, # Combine curves
+           risk.table = TRUE,                  # Add risk table
+           conf.int = TRUE,                    # Add confidence interval
+           conf.int.style = "step",            # CI style, use "step" or "ribbon"
+           censor = FALSE,                     # Remove censor points
+           tables.theme = theme_cleantable(),  # Clean risk table
+           )
+ggsave("./data/combined_figs/all_baseline_curves.png", plot=all_baseline_curves$plot, width = 8, height = 6)
+ggsave("./data/combined_figs/risk_table_of_all_baseline_curves.png", plot=all_baseline_curves$table)
+all_baseline_curves
+```
+
+survival curve on healthy and unhealthy animals based on total conditions
+```{r}
+dat_all <- survival_data
+dat_all$Total_Conditions_per_Animal[dat_all$Total_Conditions_per_Animal >0] <- 'unhealthy'
+dat_all$Total_Conditions_per_Animal[dat_all$Total_Conditions_per_Animal == 0] <- 'healthy'
+colnames(dat_all)
+dat_all <- rename(dat_all, Health_status= Total_Conditions_per_Animal)
+healthy_vs_unhealthy <- survfit(survival_object ~ Health_status, data = dat_all)
+summary(healthy_vs_unhealthy)$table
+```
+
+
+
+```{r}
+curve_healthy_vs_unhealthy <- ggsurvplot(healthy_vs_unhealthy,
+          pval = TRUE, conf.int = TRUE,
+          risk.table = TRUE, # Add risk table
+          risk.table.col = "Health_status", # Change risk table color by groups
+          linetype = "Health_status", # Change line type by groups
+          surv.median.line = "hv", # Specify median survival
+          ggtheme = theme_bw()
+          )+
+    labs(title="Survival in days by health status", x="Days", y="Survival_probability") 
+curve_healthy_vs_unhealthy
+ggsave("./data/combined_figs/curve_healthy_vs_unhealthy.png", plot=curve_healthy_vs_unhealthy$plot, width = 8, height = 6)
+ggsave("./data/combined_figs/risk_table_curve_healthy_vs_unhealthy.png", plot=curve_healthy_vs_unhealthy$table)
+```
+
+
+```{r}
+fit1 <- list(all = baseline_km_all_data, healthy_vs_unhealthy)
+all_baseline_curves1 <- ggsurvplot(fit, data = survival_data, combine = TRUE, # Combine curves
+           risk.table = TRUE,                  # Add risk table
+           conf.int = TRUE,                    # Add confidence interval
+           conf.int.style = "step",            # CI style, use "step" or "ribbon"
+           censor = FALSE,                     # Remove censor points
+           tables.theme = theme_cleantable(),  # Clean risk table
+           )
+
+all_baseline_curves1
 ```
 
 
 
 ### survival curve for sex
 
-years
-```{r}
-sex_fit_years <- survfit(Surv(years_alive, status) ~ Sex, data=survival_data)
-```
-
-
 ```{r}
 
-summary(sex_fit_years)$table
+sex_fit <- survfit(survival_object ~ Sex, data=survival_data)
+summary(sex_fit)$table
 
 ```
 
 ```{r}
-survival_sex_years <- data.frame(time = sex_fit_years$time,
-                  n.risk = sex_fit_years$n.risk,
-                  n.event = sex_fit_years$n.event,
-                  n.censor = sex_fit_years$n.censor,
-                  surv = sex_fit_years$surv,
-                  upper = sex_fit_years$upper,
-                  lower = sex_fit_years$lower
-                  )
-survival_sex_years
+sex_fit_healthy <- survfit(healthy_object ~ Sex, data=healthy_data)
+summary(sex_fit_healthy)$table
+sex_fit_unhealthy <- survfit(unhealthy_object ~ Sex, data=unhealthy_data)
+summary(sex_fit_unhealthy)$table
 ```
 
 
 ```{r}
-km_sex_years <- ggsurvplot(sex_fit_years,
+km_sex_table <- data.frame(Sex = c("male", "female", "bull"), 
+                           overall_median = c(summary(sex_fit)$table[1, 7], summary(sex_fit)$table[2, 7], summary(sex_fit)$table[3, 7]),
+                           healthy_median = c(summary(sex_fit_healthy)$table[1, 7], summary(sex_fit_healthy)$table[2, 7], summary(sex_fit_healthy)$table[3, 7]),
+                           unhealthy_median = c(summary(sex_fit_unhealthy)$table[1, 7], summary(sex_fit_unhealthy)$table[2, 7], summary(sex_fit_unhealthy)$table[3, 7]))
+
+km_sex_table
+```
+
+
+
+```{r}
+km_sex <- ggsurvplot(sex_fit,
           pval = TRUE, conf.int = TRUE,
           risk.table = TRUE, # Add risk table
           risk.table.col = "Sex", # Change risk table color by groups
-          linetype = "Sex", # Change line type by groups
+          #linetype = "Sex", # Change line type by groups
           surv.median.line = "hv", # Specify median survival
           ggtheme = theme_bw(), # Change ggplot2 theme
-          palette = c("#E7B800", "#2E9FDF", "#4E800f"))+
-  labs(title="Survival in years vs sex", x="Years", y="Survival_probability") 
-
-ggsave("./data/combined_figs/km_sex_years.png", plot=km_sex_years$plot, width = 8, height = 6)
-ggsave("./data/combined_figs/risk_table_km_sex_years.png", plot=km_sex_years$table)
-km_sex_years
-
-```
-
-days
-```{r}
-
-sex_fit_days <- survfit(Surv(days_alive, status) ~ Sex, data=survival_data)
-                     
-```
-
-
-```{r}
-
-summary(sex_fit_days)$table
-
-```
-
-```{r}
-survival_sex_days <- data.frame(time = sex_fit_days$time,
-                  n.risk = sex_fit_days$n.risk,
-                  n.event = sex_fit_days$n.event,
-                  n.censor = sex_fit_days$n.censor,
-                  surv = sex_fit_days$surv,
-                  upper = sex_fit_days$upper,
-                  lower = sex_fit_days$lower
-                  )
-survival_sex_days
-```
-
-
-```{r}
-km_sex_days <- ggsurvplot(sex_fit_days,
-          pval = TRUE, conf.int = TRUE,
-          risk.table = TRUE, # Add risk table
-          risk.table.col = "Sex", # Change risk table color by groups
-          linetype = "Sex", # Change line type by groups
-          surv.median.line = "hv", # Specify median survival
-          ggtheme = theme_bw(), # Change ggplot2 theme
-          palette = c("#E7B800", "#2E9FDF", "#4E800f"))+
+         )+
     labs(title="Survival in years vs sex", x="Days", y="Survival_probability") 
 
-ggsave("./data/combined_figs/km_sex_days.png", plot=km_sex_days$plot, width = 8, height = 6)
-ggsave("./data/combined_figs/risk_table_km_sex_days.png", plot=km_sex_days$table)
-km_sex_days
+ggsave("./data/combined_figs/km_sex.png", plot=km_sex$plot, width = 8, height = 6)
+ggsave("./data/combined_figs/risk_table_km_sex.png", plot=km_sex$table)
+km_sex
+```
+
+Log-rank tests
+```{r}
+sex_diff <- survdiff(survival_object ~ Sex, data=survival_data)
+sex_diff
+```
+
+
+```{r}
+km_sex_pairwise_F_M <- survdiff(survival_object ~ Sex, data=survival_data, subset = Sex!="B")
+km_sex_pairwise_F_M
+km_sex_pairwise_B_M <- survdiff(survival_object ~ Sex, data=survival_data, subset = Sex!="F")
+km_sex_pairwise_B_M
+km_sex_pairwise_B_F <- survdiff(survival_object ~ Sex, data=survival_data, subset = Sex!="M")
+km_sex_pairwise_B_F
+```
+
+```{r}
+km_sex_helthy_versus_unhealthy <- survfit(survival_object ~  Health_status + Sex, data=dat_all)
+
+summary(km_sex_helthy_versus_unhealthy)$table
+
+
+km_sex_helthy_versus_unhealthy <- ggsurvplot(km_sex_helthy_versus_unhealthy,
+          pval = TRUE, conf.int = TRUE,
+          risk.table = TRUE, # Add risk table
+          risk.table.col = "Sex", # Change risk table color by groups
+          linetype = "Health_status", # Change line type by groups
+          surv.median.line = "hv", # Specify median survival
+          ggtheme = theme_bw(), # Change ggplot2 theme
+         )+
+    labs(title="Survival in days vs sex", x="Days", y="Survival_probability") 
+
+ggsave("./data/combined_figs/km_sex_helthy_versus_unhealthy.png", plot=km_sex$plot, width = 8, height = 6)
+ggsave("./data/combined_figs/km_sex_helthy_versus_unhealthy.png", plot=km_sex$table)
+km_sex_helthy_versus_unhealthy
 ```
 
 
