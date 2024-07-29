@@ -267,87 +267,34 @@ km_sex_helthy_versus_unhealthy
 
 ### survival curve for place of death
 
-years
 ```{r}
 
-place_of_death_fit_years <- survfit(Surv(years_alive, status) ~ Abattoir_._Died_on_Farm, data=survival_data)
-                     
-```
-
-
-```{r}
-
-summary(place_of_death_fit_years)$table
-
+colnames(survival_data)
+survival_data <- rename(survival_data, Place_of_death=Abattoir_._Died_on_Farm) 
+dat_all <- rename(dat_all, Place_of_death=Abattoir_._Died_on_Farm)
 ```
 
 ```{r}
-survival_place_of_death_years <- data.frame(time = place_of_death_fit_years$time,
-                  n.risk = place_of_death_fit_years$n.risk,
-                  n.event = place_of_death_fit_years$n.event,
-                  n.censor = place_of_death_fit_years$n.censor,
-                  surv = place_of_death_fit_years$surv,
-                  upper = place_of_death_fit_years$upper,
-                  lower = place_of_death_fit_years$lower
-                  )
-survival_place_of_death_years
-```
 
-
-```{r}
-km_place_of_death_years <- ggsurvplot(place_of_death_fit_years,
-          pval = TRUE, conf.int = TRUE,
-          risk.table = TRUE, # Add risk table
-          risk.table.col = "Abattoir_._Died_on_Farm", # Change risk table color by groups
-          linetype = "Abattoir_._Died_on_Farm", # Change line type by groups
-          surv.median.line = "hv", # Specify median survival
-          ggtheme = theme_bw(), # Change ggplot2 theme
-          palette = c("#E7B800", "#2E9FDF")) +
-  labs(title="Survival in years vs place of death", x="Years", y="Survival_probability") 
-
-ggsave("./data/combined_figs/km_place_of_death_years.png", plot=km_place_of_death_years$plot, width = 8, height = 6)
-ggsave("./data/combined_figs/risk_table_km_place_of_death_years.png", plot=km_place_of_death_years$table)
-km_place_of_death_years
-
-```
-
-days
-```{r}
-
-place_of_death_fit_days <- survfit(Surv(days_alive, status) ~ Abattoir_._Died_on_Farm, data=survival_data)
-                     
-```
-
-
-```{r}
-
+place_of_death_fit_days <- survfit(survival_object ~ Place_of_death, data=survival_data)
 summary(place_of_death_fit_days)$table
 
-```
+place_of_death_helthy_versus_unhealthy <- survfit(survival_object ~  Health_status + Place_of_death, data=dat_all)
+summary(place_of_death_helthy_versus_unhealthy)$table
 
-```{r}
-survival_place_of_death_days <- data.frame(time = place_of_death_fit_days$time,
-                  n.risk = place_of_death_fit_days$n.risk,
-                  n.event = place_of_death_fit_days$n.event,
-                  n.censor = place_of_death_fit_days$n.censor,
-                  surv = place_of_death_fit_days$surv,
-                  upper = place_of_death_fit_days$upper,
-                  lower = place_of_death_fit_days$lower
-                  )
-survival_place_of_death_days
 ```
 
 
 ```{r}
 km_place_of_death_days <- ggsurvplot(place_of_death_fit_days,
           pval = TRUE, conf.int = TRUE,
-          risk.table = TRUE, # Add risk table
-          risk.table.col = "Abattoir_._Died_on_Farm", # Change risk table color by groups
-          linetype = "Abattoir_._Died_on_Farm", # Change line type by groups
+          risk.table = TRUE, # Add risk table between 318 and 326
+          risk.table.col = "Place_of_death", # Change risk table color by groups
+          # linetype = "Place_of_death", # Change line type by groups
           surv.median.line = "hv", # Specify median survival
           ggtheme = theme_bw(), # Change ggplot2 theme
           palette = c("#E7B800", "#2E9FDF"))+
-    labs(title="Survival in years vs place of death", x="Days", y="Survival_probability") 
+    labs(title="Survival in days vs place of death", x="Days", y="Survival probability") 
 
 ggsave("./data/combined_figs/km_place_of_death_days.png", plot=km_place_of_death_days$plot, width = 8, height = 6)
 ggsave("./data/combined_figs/risk_table_km_place_of_death_days.png", plot=km_place_of_death_days$table)
@@ -355,77 +302,64 @@ km_place_of_death_days
 
 ```
 
+```{r}
+
+km_place_of_death_days_vs_health<- ggsurvplot(place_of_death_helthy_versus_unhealthy,
+          pval = FALSE, conf.int = TRUE,
+          risk.table = FALSE, # Add risk table
+          # risk.table.col = "Place_of_death", # Change risk table color by groups
+          linetype = "Health_status", # Change line type by groups
+          surv.median.line = "hv", # Specify median survival
+          ggtheme = theme_bw(), 
+          legend.labs=c("healthy, abatttoir", "healthy, farm", "unhealthy, abattoir", "unhealthy, farm")
+          )+
+    labs(title="Survival in days vs place of death and health status", x="Days", y="Survival_probability") 
+
+km_place_of_death_days_vs_health 
+
+
+ggsave("./data/combined_figs/km_place_of_death_days_vs_health.png", plot=km_place_of_death_days_vs_health$plot, width = 8, height = 6)
+ggsave("./data/combined_figs/risk_tablekm_place_of_death_days_vs_health.png", plot=km_place_of_death_days_vs_health$table)
+
+
+
+```
+
+```{r}
+place_of_death_pairwise_unhealthy <- survdiff(survival_object ~ Place_of_death, data=dat_all, subset = Health_status!="healthy")
+place_of_death_pairwise_unhealthy
+place_of_death_pairwise_healthy <- survdiff(survival_object ~ Place_of_death, data=dat_all, subset = Health_status!="unhealthy")
+place_of_death_pairwise_healthy
+
+```
+
+
 
 Type of production
-years
-```{r}
-
-production_fit_years <- survfit(Surv(years_alive, status) ~ Beef_or_Dairy, data=survival_data)
-                     
-```
-
-
-```{r}
-
-summary(production_fit_years)$table
-
-```
-
-```{r}
-survival_production_years <- data.frame(time = production_fit_years$time,
-                  n.risk = production_fit_years$n.risk,
-                  n.event = production_fit_years$n.event,
-                  n.censor = production_fit_years$n.censor,
-                  surv = production_fit_years$surv,
-                  upper = production_fit_years$upper,
-                  lower = production_fit_years$lower
-                  )
-survival_production_years
-```
-
-
-```{r}
-km_production_years <- ggsurvplot(production_fit_years,
-          pval = TRUE, conf.int = TRUE,
-          risk.table = TRUE, # Add risk table
-          risk.table.col = "Beef_or_Dairy", # Change risk table color by groups
-          linetype = "Beef_or_Dairy", # Change line type by groups
-          surv.median.line = "hv", # Specify median survival
-          ggtheme = theme_bw(), # Change ggplot2 theme
-          palette = c("#E7B800", "#2E9FDF")) +
-      labs(title="Survival in years vs type of production", x="Years", y="Survival_probability") 
-
-ggsave("./data/combined_figs/km_production_years.png", plot=km_production_years$plot, width = 8, height = 6)
-ggsave("./data/combined_figs/risk_table_km_production_years.png", plot=km_production_years$table)
-km_production_years
-  
-```
 
 
 days
 ```{r}
 
-production_fit_days <- survfit(Surv(days_alive, status) ~ Beef_or_Dairy, data=survival_data)
-                     
-```
-
-
-```{r}
+production_fit_days <- survfit(survival_object ~ Beef_or_Dairy, data=survival_data)
 
 summary(production_fit_days)$table
 
 ```
 
+
 ```{r}
-survival_production_days <- data.frame(time = production_fit_days$time,
-                  n.risk = production_fit_days$n.risk,
-                  n.event = production_fit_days$n.event,
-                  n.censor = production_fit_days$n.censor,
-                  surv = production_fit_days$surv,
-                  upper = production_fit_days$upper,
-                  lower = production_fit_days$lower
+prod_fit_months <- survfit(Surv(survival_data$months_alive, survival_data$status)~Beef_or_Dairy, data=survival_data)
+time_prod_months <- data.frame(time = prod_fit_months$time,
+                  n.risk = prod_fit_months$n.risk,
+                  n.event = prod_fit_months$n.event,
+                  n.censor = prod_fit_months$n.censor,
+                  surv = prod_fit_months$surv,
+                  upper = prod_fit_months$upper,
+                  lower = prod_fit_months$lower
                   )
-survival_production_days
+time_prod_months
+
 ```
 
 
@@ -444,6 +378,158 @@ ggsave("./data/combined_figs/km_production_days.png", plot=km_production_days$pl
 ggsave("./data/combined_figs/risk_table_km_production_days.png", plot=km_production_days$table)
 km_production_days
 ```
+
+production vs health
+
+```{r}
+prod_helthy_vs_unhealthy <- survfit(survival_object ~  Health_status + Beef_or_Dairy, data=dat_all)
+summary(prod_helthy_vs_unhealthy)$table
+```
+
+```{r}
+km_production_vs_health <- ggsurvplot(prod_helthy_vs_unhealthy,
+          pval = TRUE, conf.int = TRUE,
+          risk.table = TRUE, # Add risk table
+          risk.table.col = "Beef_or_Dairy", # Change risk table color by groups
+          linetype = "Health_status", # Change line type by groups
+          surv.median.line = "hv", # Specify median survival
+          ggtheme = theme_bw(), # Change ggplot2 theme
+          ) +
+        labs(title="Survival in years vs type of production", x="Years", y="Survival probability") 
+
+ggsave("./data/combined_figs/km_production_vs_health.png", plot=km_production_vs_health$plot, width = 8, height = 6)
+ggsave("./data/combined_figs/risk_table_km_production_vs_health.png", plot=km_production_vs_health$table)
+km_production_vs_health
+```
+
+```{r}
+prod_pairwise_unhealthy <- survdiff(survival_object ~ Beef_or_Dairy, data=dat_all, subset = Health_status!="healthy")
+prod_pairwise_unhealthy
+prod_pairwise_healthy <- survdiff(survival_object ~ Beef_or_Dairy, data=dat_all, subset = Health_status!="unhealthy")
+prod_pairwise_healthy
+
+```
+
+
+Dvo Code
+```{r}
+
+DVO_fit_days <- survfit(Surv(days_alive, status) ~ Dvo_Code, data=survival_data)
+summary(DVO_fit_days)$table
+DVO_fit_health <- survfit(Surv(days_alive, status) ~ Dvo_Code + Health_status, data=dat_all)
+summary(DVO_fit_health)$table
+```
+
+
+```{r}
+ km_DVO_days <- ggsurvplot(DVO_fit_days,
+                           data = survival_data,
+                           pval = TRUE,
+                           conf.int = TRUE,
+                           risk.table = TRUE,
+                           title = paste("Survival Curve for all DVO codes, (Days)"),
+    xlab = "Time (Days)",
+    ylab = "Survival Probability",
+    legend.labs = c(levels(survival_data$Dvo_Code))
+  )
+ggsave("./data/combined_figs/km_DVO_days.png", plot=km_DVO_days$plot, width = 8, height = 6)
+ggsave("./data/combined_figs/km_DVO_days.png", plot=km_DVO_days$table)
+km_DVO_days
+```
+
+```{r}
+dvo_all <- survival_data
+dvo_all$Dvo_Code <- as.character(dvo_all$Dvo_Code)
+dvo <- levels(survival_data$Dvo_Code)
+
+for(i in 1:length(dvo)){
+  dvo_renamed$Dvo_Code[dvo_renamed$Dvo_Code==dvo[i]] <- dvo[i]
+  dvo_renamed$Dvo_Code[dvo_renamed$Dvo_Code != dvo[i]] <- "other"
+  dvo_vs_other <- survfit(survival_object ~ Dvo_Code, data = dvo_renamed)
+  print(summary(dvo_vs_other)$table)
+  
+  plot_days <- ggsurvplot(
+    dvo_vs_other,
+    data = dvo_renamed,
+    pval = TRUE,
+    conf.int = TRUE,
+    risk.table = TRUE,
+    title = paste("Survival Curve for", dvo[i], "(Days)"),
+    xlab = "Time (Days)",
+    ylab = "Survival Probability"
+  )
+  
+  print(plot_days)
+  ggsave(paste("./data/combined_figs/byDvo/",dvo[i],".png", sep = ""), plot=plot_days$plot, width = 8, height = 6)
+  
+  dvo_renamed <- dvo_all
+  }
+
+
+```
+
+
+Breed
+```{r}
+
+breed_fit_days <- survfit(Surv(days_alive, status) ~ Breed, data=survival_data)
+summary(breed_fit_days)$table
+breed_fit_health <- survfit(Surv(days_alive, status) ~ Breed + Health_status, data=dat_all)
+summary(breed_fit_health)$table
+```
+
+
+```{r}
+ km_breed_days <- ggsurvplot(breed_fit_days,
+                           data = survival_data,
+                           pval = TRUE,
+                           conf.int = TRUE,
+                           risk.table = TRUE,
+                           title = paste("Survival Curve for all breeds, (Days)"),
+    xlab = "Time (Days)",
+    ylab = "Survival Probability",
+    legend.labs = c(levels(survival_data$Breed))
+  )
+ggsave("./data/combined_figs/km_breed_days.png", plot=km_breed_days$plot, width = 8, height = 6)
+ggsave("./data/combined_figs/km_breed_days.png", plot=km_breed_days$table)
+km_breed_days
+```
+
+```{r}
+breed_all <- survival_data
+breed_all$Breed <- as.character(breed_all$Breed)
+breeds <- levels(survival_data$Breed)
+
+for(i in 1:length(dvo)){
+  dvo_renamed$Dvo_Code[dvo_renamed$Dvo_Code==dvo[i]] <- dvo[i]
+  dvo_renamed$Dvo_Code[dvo_renamed$Dvo_Code != dvo[i]] <- "other"
+  dvo_vs_other <- survfit(survival_object ~ Dvo_Code, data = dvo_renamed)
+  print(summary(dvo_vs_other)$table)
+  
+  plot_days <- ggsurvplot(
+    dvo_vs_other,
+    data = dvo_renamed,
+    pval = TRUE,
+    conf.int = TRUE,
+    risk.table = TRUE,
+    title = paste("Survival Curve for", dvo[i], "(Days)"),
+    xlab = "Time (Days)",
+    ylab = "Survival Probability"
+  )
+  
+  print(plot_days)
+  ggsave(paste("./data/combined_figs/byDvo/",dvo[i],".png", sep = ""), plot=plot_days$plot, width = 8, height = 6)
+  
+  dvo_renamed <- dvo_all
+  }
+
+
+```
+
+
+
+
+
 
 
 years
@@ -631,102 +717,14 @@ subset_3_total_conditions_days
 ```
 
 
-DVO_code
-years
-```{r}
-
-DVO_fit_years <- survfit(Surv(years_alive, status) ~ Dvo_Code, data=survival_data)
-                     
-```
 
 
-```{r}
-
-summary(DVO_fit_years)$table
-
-```
-
-```{r}
-survival_DVO_years <- data.frame(time = DVO_fit_years$time,
-                  n.risk = DVO_fit_years$n.risk,
-                  n.event = DVO_fit_years$n.event,
-                  n.censor = DVO_fit_years$n.censor,
-                  surv = DVO_fit_years$surv,
-                  upper = DVO_fit_years$upper,
-                  lower = DVO_fit_years$lower
-                  )
-survival_DVO_years
-```
-
-
-```{r}
-km_DVO_years <- ggsurvplot(DVO_fit_years,
-          pval = TRUE, conf.int = TRUE,
-          risk.table = TRUE, # Add risk table
-          risk.table.col = "Dvo_Code", # Change risk table color by groups
-          linetype = "Dvo_Code", # Change line type by groups
-          surv.median.line = "hv", # Specify median survival
-          ggtheme = theme_bw(), # Change ggplot2 theme
-) +
-  labs(title="Survival in years vs DVO code", x="Days", y="Survival probability") 
-ggsave("./data/combined_figs/km_DVO_years.png", plot=km_DVO_years$plot, width = 8, height = 6)
-ggsave("./data/combined_figs/km_DVO_years.png", plot=km_DVO_years$table)
-km_DVO_years
-
-```
-
-days
-```{r}
-
-DVO_fit_days <- survfit(Surv(days_alive, status) ~ Dvo_Code, data=survival_data)
-                     
-```
-
-
-```{r}
-
-summary(DVO_fit_days)$table
-
-```
-
-```{r}
-survival_DVO_days <- data.frame(time = DVO_fit_days$time,
-                  n.risk = DVO_fit_days$n.risk,
-                  n.event = DVO_fit_days$n.event,
-                  n.censor = DVO_fit_days$n.censor,
-                  surv = DVO_fit_days$surv,
-                  upper = DVO_fit_days$upper,
-                  lower = DVO_fit_days$lower
-)
-
-survival_DVO_days
-```
-
-
-
-```{r}
- km_DVO_days <- ggsurvplot(DVO_fit_years,
-          pval = TRUE, conf.int = TRUE,
-          risk.table = TRUE, # Add risk table
-          risk.table.col = "Dvo_Code", # Change risk table color by groups
-          linetype = "Dvo_Code", # Change line type by groups
-          surv.median.line = "hv", # Specify median survival
-          ggtheme = theme_bw(), # Change ggplot2 theme
-) +
-  labs(title="Survival in days vs DVO code", x="Days", y="Survival probability") 
-ggsave("./data/combined_figs/km_DVO_days.png", plot=km_DVO_days$plot, width = 8, height = 6)
-ggsave("./data/combined_figs/km_DVO_days.png", plot=km_DVO_days$table)
-km_DVO_days
-```
 
 
 
 Conditions
-years
 ```{r}
-condition_columns <- c(colnames(survival_data))
-condition_columns[21:93]
-                     
+condition_columns <- colnames(survival_data)[21:44]
 ```
 
 
@@ -737,41 +735,10 @@ surv_obj_years <- Surv(time = survival_data$years_alive, event = survival_data$s
 
 ```
 
-```{r}
-
-```
-
-In the combined with weather data conditions "TSE.FAILURE" and "NO.AM.INSPECTION" doesn't exists
 
 ```{r}
-condition_columns <- c("No", "SEPTICAEMIA", "ENDOCARDITIS", "TELANGECTASIS", 
-                       "FACTORY.DAMAGE", "CONTAMINATION", "ABSCESS.PYAEMIA", 
-                       "NAD", "FLUKE.DAMAGE", "BRUISING", "NEPHRITIS", 
-                       "FASCIOLIASIS", "PERITONITIS", "TB", 
-                       "PLEUR.PNEUMONIA.GENERAL", "PERICARDITIS", "ACTINO", 
-                       "RESIDUES", "HYDRONEPHROSIS", "HAEMATOMA", 
-                       "ARTHRITIS", "OEDEMA", "PETECHAE.HAEMORRHAGES", 
-                       "TB.GENERALISED", "PLEURISY", "PLEUR.PNEUMONIA.LOCAL", 
-                       "CYSTICERCUS.VIABLE", "EMACIATION", "SCAR.TISSUE", 
-                       "FEVERED", "PYLEONEPHRITIS", "PNEUMONIA", 
-                       "INJECTION.SITES", "ANAEMIA", "JAUNDICE", 
-                       "NEPHRITIS.NEPHROSIS", "NEPHROSIS", "DETAIN", 
-                       "PREG.STATUS", "CONGESTION", "MASTITIS", 
-                       "MULTIPLE.ABSCESS", "INFARCTS", "URAEMIA", 
-                       "SEPTIC.PERITONITIS", "FRACTURE", "ILL.BLED", 
-                       "OTHER.PATHOLOGY", "CIRRHOSIS", 
-                       "CYSTICERCUS.NON.VIABLE", "SUSPECT.TUMOURS", 
-                       "OTHER.PROCESSING", "ABNORMAL.COLOUR", "BURSITIS", 
-                       "TSE.SAMPLE", "ABNORMAL.ODOUR", "XANTHOSIS", 
-                       "POLYARTHRITIS", "NECROSIS", "MELANOMA", 
-                       "WOUNDS", "ENTERITIS", "EOSINOPHILIC.MYOSITIS", 
-                       "ASCITIES", "EXCESS.TEETH", "SARCOCYSTIS", 
-                       "PIGMENTATION", "BLOOD.SPLASH", "DEAD.ON.ARRIVAL", 
-                       "TSE.SAMPLE.ASSOCIATES", "PARASITES", "OVER.30.MONTHS", 
-                       "LUNG.WORM")
-
 # Loop through the condition columns
-for (i in 2:73) {
+for (i in 1:length(condition_columns)) {
   # Fit survival models for the condition
   condition_name <- condition_columns[i]
   fit_days <- survfit(surv_obj_days ~ survival_data[[condition_name]])
@@ -790,7 +757,7 @@ for (i in 2:73) {
   )
   
   print(plot_days)
-  ggsave(paste("./data/combined_figs/bycondition/",condition_name,".png"), plot=plot_days$plot, width = 8, height = 6)
+  ggsave(paste("./data/combined_figs/byconditionNew/",condition_name,".png", sep=""), plot=plot_days$plot, width = 8, height = 6)
 }
 
 ```
