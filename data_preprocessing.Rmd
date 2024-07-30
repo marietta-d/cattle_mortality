@@ -457,10 +457,10 @@ head(long_merged_data)
 
 # combine the average herd size in the merged data
 ```{r}
-data_dir <- "./data/herd_size_data"
+data_dir <- "./data/herd_size/"
 
 file_list <- list.files(data_dir, pattern = "*.csv", full.names = TRUE)
-
+file_list
 # Function to read a CSV file and add a column with part of the file name
 read_and_label <- function(file_path) {
   # Extract file name without extension
@@ -491,43 +491,43 @@ combined_data$Year <- as.integer(combined_data$Year)
 
 
 ```{r}
-str(merged_data)
+str(long_merged_data)
 # change merged_data herd id to character
-merged_data$Herd_Id <- as.character(merged_data$Herd_Id)
+long_merged_data$Herd_Id <- as.character(long_merged_data$Herd_Id)
 ```
 
 
-```{r}
-str(merged_data)
-```
+
 
 
 ```{r}
 herd_id_size <- combined_data$Herd_Id
 
-herd_id_old_data <- merged_data$Herd_Id
+herd_id_old_data <- long_merged_data$Herd_Id
 
 common_ids <- intersect(herd_id_size, herd_id_old_data)
 common_ids
 sum(herd_id_size%in%herd_id_old_data)
 ```
-
-
-```{r}
-unique(sort(herd_id_size))
-```
-
-
-```{r}
-unique(sort(herd_id_old_data))
-```
-
-
-### I dont have the same herd Id's in the two datasets ###
-
-
 ```{r}
 colnames(long_merged_data)
+colnames(combined_data)
+combined_data <- combined_data[, 2:4]
+sum(duplicated(combined_data))
+no_duplicate_combine_data <- combined_data %>%
+  distinct()
+```
+
+```{r}
+final_merged_data <- merge(x=long_merged_data, y=no_duplicate_combine_data, by = c("Herd_Id", "Year"), all.x = TRUE)
+
+nrow(final_merged_data)
+```
+
+
+
+```{r}
+colnames(final_merged_data)
 ```
 
 
@@ -537,19 +537,18 @@ One hot encoding ConditionsbyAI for merged data
 
 ```{r}
 
-merged_wide <- long_merged_data %>%
+final_merged_wide <- final_merged_data %>%
   mutate(ConditionPresent = 1) %>%
   pivot_wider(names_from = ConditionsbyAI, values_from = ConditionPresent, values_fill = list(ConditionPresent = 0))
 
-merged_wide[merged_wide$Animal_Id=="5dd425da1403654d3dff7ea12ff3e1d1d9f82af2", ]
-merged_data[merged_data$Animal_Id=="5dd425da1403654d3dff7ea12ff3e1d1d9f82af2", ]
-long_merged_data[long_merged_data$Animal_Id=="5dd425da1403654d3dff7ea12ff3e1d1d9f82af2", ]
+final_merged_wide[final_merged_wide$Animal_Id=="5dd425da1403654d3dff7ea12ff3e1d1d9f82af2", ]
+final_merged_data[final_merged_data$Animal_Id=="5dd425da1403654d3dff7ea12ff3e1d1d9f82af2", ]
 
 ```
 
 
 save dataset in a csv file
 ```{r}
-write.csv(merged_wide, file="./data/merged_weather_wide.csv", row.names = FALSE)
+write.csv(final_merged_wide, file="./data/final_merged_wide.csv", row.names = FALSE)
 ```
 
