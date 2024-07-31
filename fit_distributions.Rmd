@@ -131,7 +131,8 @@ for (aft_dist in aft_distributions) {
       print(".............................................")
       print(" ")
       
-      if (i %% 2) {
+      if (i %% 10) {
+        # Every 10 iterations save all the useful stuff
         saveRDS(data.frame(mdl_name, aic, bic, llik), "jesus_saves_model_stuff.rds")
       }
       
