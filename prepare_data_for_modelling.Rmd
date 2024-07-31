@@ -24,8 +24,14 @@ memory.limit(size=70000)
 ```
 
 ```{r}
-survival_data_without_outliers <- read.csv("./data/combined_data_without_outliers.csv")
+survival_data_without_outliers <- read.csv("./data/new_combined_data_without_outliers.csv")
 ```
+
+I will drop the rows with na for now until Emily tells me what to do with this values
+```{r}
+survival_data_without_outliers <-drop_na(survival_data_without_outliers)
+```
+
 
 # keep only conditions with more than 1000 animals
 We will keep only the animals with common condition
@@ -33,7 +39,7 @@ We will keep only the animals with common condition
 
 ```{r}
 colnames(survival_data_without_outliers)
-conditions_columns <- colnames(survival_data_without_outliers[21:92])
+conditions_columns <- colnames(survival_data_without_outliers[22:93])
 conditions_columns
 conditions_sums <- colSums(survival_data_without_outliers[, conditions_columns])
 conditions_sums
@@ -52,12 +58,14 @@ filtered_rare_conditions
 Delete those rows where the animal has only rare conditions
 ```{r}
 rare_conditions_data <- filtered_rare_conditions %>%
-  filter(Total_Conditions_per_Animal > 0 & rowSums(filtered_rare_conditions[21:44]) == 0) 
+  filter(Total_Conditions_per_Animal > 0 & rowSums(filtered_rare_conditions[22:45]) == 0) 
+
 common_conditions_data <- filtered_rare_conditions %>%
-  filter(Total_Conditions_per_Animal== 0 | rowSums(filtered_rare_conditions[21:44]) >0 ) 
+  filter(Total_Conditions_per_Animal== 0 | rowSums(filtered_rare_conditions[22:45]) >0 ) 
   
 ```
-I will delete 2693 entries where the animals don't have any of the common conditions
+I will delete 2693 entries where the animals don't have any of the common conditions ### this was on the data before the herd size and the deletion of missing values
+Now it is 2690 entries
 
 ```{r}
 common_conditions_data
@@ -68,7 +76,7 @@ common_conditions_data
 ```{r}
 N <- 8
 top_breeds <- common_conditions_data %>%
-  count(Breed, sort=TRUE) %>%
+  dplyr::count(Breed, sort=TRUE) %>%
   top_n(N, n) %>%
   pull(Breed)
 
@@ -78,9 +86,12 @@ common_conditions_breed_data <- common_conditions_data %>%
 
 nrow(common_conditions_breed_data)/nrow(common_conditions_data)* 100
 ```
-Top 8 breeds account for the 91.50% of the animals
+Old dataset Top 8 breeds account for the 91.50% of the animals
 We will keep only those
 171019 rows were removed this is the 8.5% of our common_conditions_data
+
+In the new dataset 170094 rows were removed the proportion of total animals is the same 
+8.44% is on the survival data before removing the missing values
 ```{r}
 (nrow(common_conditions_data)-nrow(common_conditions_breed_data)) / total_animals_no_outliers *100
 ```

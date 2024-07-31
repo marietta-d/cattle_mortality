@@ -508,6 +508,8 @@ herd_id_old_data <- long_merged_data$Herd_Id
 common_ids <- intersect(herd_id_size, herd_id_old_data)
 common_ids
 sum(herd_id_size%in%herd_id_old_data)
+
+
 ```
 ```{r}
 colnames(long_merged_data)
@@ -516,12 +518,24 @@ combined_data <- combined_data[, 2:4]
 sum(duplicated(combined_data))
 no_duplicate_combine_data <- combined_data %>%
   distinct()
+sum(is.na(no_duplicate_combine_data))
+no_duplicate_combine_data[is.na(no_duplicate_combine_data), ]
+```
+
+
+
+
+
+```{r}
+long_merged_data[long_merged_data$Herd_Id=="dcf4bd03236b1b4b06e7a6381482e96a9feabc42", ]
 ```
 
 ```{r}
 final_merged_data <- merge(x=long_merged_data, y=no_duplicate_combine_data, by = c("Herd_Id", "Year"), all.x = TRUE)
 
 nrow(final_merged_data)
+
+final_merged_data[final_merged_data$Herd_Id=="fef07ff7ccf1f32b2bb31f90a8eee5c5d9ceb639", ]
 ```
 
 
@@ -542,7 +556,12 @@ final_merged_wide <- final_merged_data %>%
   pivot_wider(names_from = ConditionsbyAI, values_from = ConditionPresent, values_fill = list(ConditionPresent = 0))
 
 final_merged_wide[final_merged_wide$Animal_Id=="5dd425da1403654d3dff7ea12ff3e1d1d9f82af2", ]
+combined_data[combined_data$Animal_Id=="5dd425da1403654d3dff7ea12ff3e1d1d9f82af2"]
 final_merged_data[final_merged_data$Animal_Id=="5dd425da1403654d3dff7ea12ff3e1d1d9f82af2", ]
+
+final_merged_wide[final_merged_wide$Herd_Id=="fef07ff7ccf1f32b2bb31f90a8eee5c5d9ceb639", ]
+combined_data[combined_data$Herd_Id=="fef07ff7ccf1f32b2bb31f90a8eee5c5d9ceb639", ]
+final_merged_data[final_merged_data$Herd_Id=="fef07ff7ccf1f32b2bb31f90a8eee5c5d9ceb639", ]
 
 ```
 

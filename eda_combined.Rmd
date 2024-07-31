@@ -27,8 +27,10 @@ library(ggpubr)
 
 Load dataset 
 ```{r}
-combined_data <- read.csv("./data/merged_weather_wide.csv")
+combined_data <- read.csv("./data/final_merged_wide.csv")
 head(combined_data)
+combined_size_weather <- read.csv("./data/final_merged_wide.csv")
+combined_size_weather[combined_size_weather$Herd_Id=="fef07ff7ccf1f32b2bb31f90a8eee5c5d9ceb639", ]
 ```
 
 
@@ -43,6 +45,7 @@ str(combined_data)
 combined_data[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy")] = 
   lapply(combined_data[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy")],
                                 function(x) as.factor(x))
+str(combined_data)
 ```
 
 ```{r}
@@ -469,20 +472,23 @@ age_summary
 
 
 ### Categorical variables
+```{r}
+detach()
+```
 
 
 ```{r}
 Sex_summary <- combined_data_without_outliers %>%
   group_by(Sex) %>%
-  summarise(
+  dplyr::summarise(
     mean_age = mean(days_alive),
-    percent_of_total_animals = n() * 100/ total_animals_no_outliers,
+    number_of_animals = n(),
+    percent_of_total_animals = number_of_animals * 100/ total_animals_no_outliers,
     percent_dairy = mean(Beef_or_Dairy == "Dairy") * 100,
     percent_beef = mean(Beef_or_Dairy == "Beef") * 100,
     Abattoir_deaths = 100 * sum(Abattoir_._Died_on_Farm == "Abattoir") / n(),
     Farm_deaths = 100 * sum(Abattoir_._Died_on_Farm == "Died on Farm") / n(),
     mean_total_conditions = mean(as.integer(Total_Conditions_per_Animal)),
-    number_of_animals = n(),
     percent_healthy_animals = sum(Total_Conditions_per_Animal==0) / number_of_animals *100) %>%
   arrange(desc(number_of_animals))
 Sex_summary
@@ -598,7 +604,10 @@ Herd_id:
 ```{r}
 Herd_freq_table <- combined_data_without_outliers %>%
   group_by(Herd_Id) %>%
-  summarise(frequency = n(), age_days= mean(days_alive), age_years=mean(years_alive)) %>%
+  dplyr::summarise(frequency = n(), 
+                   age_days= mean(days_alive), 
+                   age_years=mean(years_alive),
+                   mean_size = mean(AvgOftotal_animals)) %>%
   arrange(desc(frequency))
 Herd_freq_table
 Herd_freq_table <- Herd_freq_table %>%
@@ -609,6 +618,13 @@ paste("mean age for medium size herds (>=100, <= 1000) = ", mean(Herd_freq_table
 paste("mean age for big herds (>1000) = ", mean(Herd_freq_table$age_days[Herd_freq_table$frequency >1000]), "days", "total number of small herds = ", nrow(Herd_freq_table[Herd_freq_table$frequency >1000, ]))
 
 ```
+
+```{r}
+summary(combined_data_without_outliers$AvgOftotal_animals)
+```
+
+
+
 
 
 ```{r}
@@ -624,7 +640,7 @@ Herd summary
 overall_percent_of_healty <- nrow(healthy_animals)/ total_animals_no_outliers *100
 herd_summary <- combined_data_without_outliers %>%
   group_by(Herd_Id) %>%
-  summarise(
+  dplyr::summarise(
     mean_age = mean(days_alive),
     percent_of_total_animals = n() * 100/ total_animals_no_outliers,
     percent_male = mean(Sex == "M") * 100,
@@ -1184,8 +1200,80 @@ ggsave("./data/combined_figs/beef_or_dairy_barplot.png", plot=beef_or_dairy_barp
 
 
 ### Numerical Variables
+```{r}
+colSums(is.na(combined_data_without_outliers))
 
-####Total conditions per animal
+```
+
+Average Herd size
+```{r}
+summary(combined_data_without_outliers$AvgOftotal_animals)
+
+```
+
+
+```{r}
+# how many herd_ids have missing values?
+str(combined_data_without_outliers)
+not_missing_herd_size <- drop_na(combined_data_without_outliers)
+str(not_missing_herd_size)
+not_missing_herd_size <- droplevels(not_missing_herd_size)
+str(not_missing_herd_size)
+list_of_herd_id <- levels(combined_data_without_outliers$Herd_Id)
+list_of_not_mis_herd_size <- levels(not_missing_herd_size$Herd_Id)
+list_of_herds_missing_valus <- setdiff(list_of_herd_id, list_of_not_mis_herd_size)
+list_of_herds_missing_valus
+```
+
+```{r}
+herd_size_missing_values <- combined_data_without_outliers %>%
+  filter(is.na(combined_data_without_outliers$AvgOftotal_animals))
+write.csv(herd_size_missing_values, file="./data/herd_size_missing_values.csv", row.names = FALSE)
+```
+
+
+
+```{r}
+missing_herd_size <- data.frame()
+for(i in 1:length(list_of_herds_missing_valus)){
+  id <- list_of_herds_missing_valus[i]
+  df_i <- data.frame(combined_data_without_outliers[combined_data_without_outliers$Herd_Id==id, ])
+missing_herd_size <- rbind(missing_herd_size, df_i)
+}
+
+missing_herd_size
+droplevels(missing_herd_size)
+str(missing_herd_size)
+```
+
+
+```{r}
+         
+herd_size_hist <- ggplot(not_missing_herd_size, aes(x=AvgOftotal_animals)) +
+  geom_histogram(binwidth=0.5, fill="steelblue") +
+  geom_vline(aes(xintercept= mean(AvgOftotal_animals), color="red")) +
+  labs(title="Average herd size", x="Herd size", y="Animals") +
+  theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+        axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+        axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+        axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+        panel.background = element_rect(fill = "transparent"), # bg of the panel
+        plot.background = element_rect(fill = "transparent", color = NA)) 
+herd_size_hist
+ggsave("./data/combined_figs/herd_size_hist.png", plot=herd_size_hist, width=8, height = 6)
+```
+
+
+```{r}
+herd_size_scatter_plot <- ggplot(not_missing_herd_size, aes(x=AvgOftotal_animals, y=days_alive)) + geom_point()
+ggsave("./data/combined_figs/herd_size_scatter_plot.png", plot=herd_size_scatter_plot, width=8, height = 6)
+herd_size_scatter_plot
+```
+
+
+
+
+Total conditions per animal
 ```{r}
 
 summary(combined_data_without_outliers[, "Total_Conditions_per_Animal"])
@@ -1546,6 +1634,9 @@ print("some conditions are more common:" )
 conditions_names[colSums(unhealthy[, 21:92]) > 3952]
 
 ```
+
+
+
 ```{r}
 colSums(unhealthy[, 21:92])
 ```
@@ -1656,8 +1747,10 @@ ggqqplot(combined_data_without_outliers, x = "days_alive",
    ggtheme = theme_pubclean())
 ```
 
+
+
 save combined_data_without_outliers
 ```{r}
-write.csv(combined_data_without_outliers, file="./data/combined_data_without_outliers.csv", row.names = FALSE)
+write.csv(combined_data_without_outliers, file="./data/new_combined_data_without_outliers.csv", row.names = FALSE)
 ```
 

@@ -26,15 +26,11 @@ library(actuar)
 
 
 ```{r}
-data <- read.csv("./data/filtered_conditions_breeds.csv")
+data <- read.csv("./data/common_conditions_breed_data.csv")
 ```
 
 ```{r}
-data
-```
-
-```{r}
-survival_object <- Surv(data_excluded_days$days_alive, data_excluded_days$status)
+colnames(data)
 ```
 
 ```{r}
@@ -44,12 +40,136 @@ summary(data_excluded_days$days_alive)
 
 ```
 
+
+
 ```{r}
 
 data_excluded_days[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy")] = 
   lapply(data_excluded_days[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy")],
                                 function(x) as.factor(x))
 ```
+
+```{r}
+colnames(data_excluded_days)
+```
+
+
+```{r}
+healthy_animals <- data_excluded_days %>%
+  filter(Total_Conditions_per_Animal==0)
+healthy_animals <- healthy_animals[, c(14, 15, 3, 6, 7, 8, 11, 20)]
+healthy_animals
+```
+
+
+```{r}
+# Define the AFT distributions you want to use
+aft_distributions <- c("exponential", "weibull", "lognormal", "loglogistic")
+
+# Define the predictors you want to use
+predictors <- colnames(healthy_animals[3:8])
+predictors
+```
+
+
+
+```{r}
+# Function to create formulas for different combinations of predictors
+create_formulas <- function(predictors) {
+  formulas <- list()
+  for (i in 1:length(predictors)) {
+    combs <- combn(predictors, i, simplify = FALSE)
+    for (comb in combs) {
+      formula <- as.formula(paste("Surv(days_alive, status) ~", paste(comb, collapse = " + ")))
+      formulas <- append(formulas, list(formula))
+    }
+  }
+  return(formulas)
+}
+
+# Generate formulas for all combinations of predictors
+formulas <- create_formulas(predictors)
+
+# Initialize lists to store AIC, loglik, and BIC for each model
+aic <- c()
+bic <- c()
+llik <- c()
+mdl_name <- c()
+mdl <- c()
+
+
+num_formulas <- length(formulas)
+num_distributions <- length(aft_distributions)
+num_combinations <- num_formulas * num_distributions
+i <- 1
+
+# Loop over each AFT distribution and each formula, fit the model, and store AIC, loglik, and BIC
+for (aft_dist in aft_distributions) {
+  for (formula in formulas) {
+    # Fit the AFT model
+    tryCatch({
+      surv_model <- survreg(formula, data = healthy_animals, dist = aft_dist)
+      
+      # Calculate AIC, log-likelihood, and BIC
+      aic_value <- AIC(surv_model)
+      bic_value <- BIC(surv_model)
+      llik_value <- as.numeric(logLik(surv_model))
+      model_name <- paste("AFT", aft_dist, deparse(formula), sep = " - ")
+      
+      aic <- c(aic, aic_value)
+      bic <- c(bic, bic_value)
+      llik <- c(llik, llik_value)
+      mdl_name <- c(mdl_name, model_name)
+      mdl <- c(mdl, surv_model)
+
+      print("---------------------------------------------")
+      print(paste("MODEL ", i, " / ", num_combinations, "  (", 100*i/num_combinations, "%)"))
+      print(paste("Model name: ", model_name))
+      print(paste("AIC : ", aic_value))
+      print(paste("ell : ", llik_value))
+      print(paste("BIC : ", bic_value))
+      print(".............................................")
+      print(" ")
+      
+      if (i %% 2) {
+        saveRDS(data.frame(mdl_name, aic, bic, llik), "jesus_saves_model_stuff.rds")
+      }
+      
+    }, error = function(e) {
+      print(paste("Error happened while trying to deal with dist: ", aft_dist, " for formula ", formula))
+    })
+  }
+}
+```
+
+```{r}
+combinatorial_modelling_results <- data.frame(mdl_name, aic, bic, llik)
+```
+
+```{r}
+aft_model <-survreg()
+
+# Convert model_results into a dataframe
+aft_model_results_df <- data.frame(
+  Model = names(aft_comb_results),
+  AIC = sapply(aft_comb_results, function(x) x$AIC),
+  LogLikelihood = sapply(aft_comb_results, function(x) x$LogLikelihood),
+  BIC = sapply(aft_comb_results, function(x) x$BIC)
+)
+
+head(aft_model_results_df)
+```
+
+
+
+
+
+
+
+
+
+
+
 
 Attempt to fit weibul for 2 categorical variables
 ```{r}
