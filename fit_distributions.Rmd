@@ -132,18 +132,23 @@ for (aft_dist in aft_distributions) {
       mdl_name <- c(mdl_name, model_name)
       mdl <- c(mdl, surv_model)
       
-      print(length(aic))
-      print(length(bic))
-      print(length(llik))
-      print(length(mdl_name))
+      print(paste("Check      : ", length(aic), length(bic), length(llik), length(mdl_name)))
       print(".............................................")
       print(" ")
+      
+      if (i %% 5 == 0) {
+        print("Saving data...")
+        saveRDS(data.frame(aic, bic, llik, mdl_name), file="temp/temp_data.rds")  
+        saveRDS(mdl,  file="temp/modelz.rds")  
+        print("Data saved successful in temp/temp_data.rds and models in temp/modelz.rds :-)")
+      }
       
       i <- i + 1
       
     }, error = function(e) {
       print(e)
       print(paste("Error happened while trying to deal with dist: ", aft_dist, " for formula ", formula))
+      i <- i + 1
     })
   }
 }
