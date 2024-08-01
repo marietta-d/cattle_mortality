@@ -58,8 +58,24 @@ formulas_of_len <- function(predictors, k) {
   return(all_formulas_len_k)
 }
 
-# TAKE ALL FORMULAS OF LENGTH 1
-formulas_1 <- formulas_of_len(predictors, 1)
+#' Wrapper function that returns all possible formulas (list of strings)
+#' There are 2^N - 1 formulas, where N is the number of predictors
+#' 
+#' @param predictors list of variables (strings)
+#' @returns all possible formulas (list of strings)
+all_possible_formulas <- function(predictors) {
+  all_formulas <- c()
+  num_predictors <- length(predictors)
+  for (i in 1:num_predictors) {
+      these_combinations <- formulas_of_len(predictors, i)
+      all_formulas <- c(all_formulas, these_combinations)
+  }
+  return(all_formulas)
+}
+
+
+# TAKE ALL FORMULAS OF LENGTH 1, 2, ..., n
+formulas <- all_possible_formulas(predictors)
 
 aic_cache <- c()
 bic_cache <- c()
@@ -69,7 +85,7 @@ cox_mdl_cache <- list()
 test_ph_cache <- list()
 i <- 1
 # MAKE COX MODELS
-for (f in formulas_1) {
+for (f in formulas) {
   # 1. make the model
   cox_mdl <- coxph(as.formula(f), data=cox_data)
   # 2. compute statistics
@@ -100,4 +116,14 @@ for (f in formulas_1) {
   
   i <- i + 1
 }
+
+destination_folder <- "cox"
+model_meta <- data.frame(aic_cache, bic_cache, llik_cache, formula_cache)
+print("Modelling complete - saving final data in destination folder")
+meta_fname <- paste("models", destination_folder, "meta.rds", sep="/")
+models_fname <- paste("models", destination_folder, "models.rds", sep="/")
+statistical_tests_fname <- paste("models", destination_folder, "stats.rds", sep="/")
+saveRDS(model_meta, file=meta_fname)  
+saveRDS(cox_mdl_cache,  file=models_fname) 
+saveRDS(test_ph_cache,  file=statistical_tests_fname) 
 ```
