@@ -55,6 +55,9 @@ The best five models are shown below
 ### Cox models on all data
 
 Overall 127 models where generated and tested.
+The AIC, BIC, and log-likelihood of the five best models is shown below.
+The results are not satisfatory. 
+
 
 | Vars   |  AIC   |     BIC   |    loglik |
 | ------ | ------ | --------- | ------ |
@@ -63,6 +66,48 @@ Overall 127 models where generated and tested.
 | DVO, Abbatoir, Breed, Sex, Place of Death, # conditions |   48515655  |  48516090  |  -24257792 | 
 | DVO, Abbatoir, Breed, Sex, # conditions |   48515682   | 48516104  |  -24257807 | 
 | Abbatoir, Breed, Sex, Place of Death, # conditions, Herd size |   48518140 |   48518475 |   -24259043 | 
+
+
+Using `cox.zph`, which implements the statistical test proposed by P. Grambsch and T. Therneau (1994),
+we made the following observations:
+
+1. In the univariate Cox models, the above statistical test showed that the proportional hazards (PH) assumption did not hold
+2. In the majority of multivariate models, the PH assumption did not hold
+3. In 13 of the multivariate models, the PH assumption was verified only for the herd size; details are shown below
+
+
+| Herd size | DVO | Abattoir | Sex | Place of death | Num conditions | Breed | 
+| --------- | --- | -------- | --- | -------------- | -------------- | ----- |
+|    0.81   | 0   |  0       |  0  |   X            | 0              | X     |
+|    0.49   | X   |  0       |  0  |   X            | X              | X     | 
+|    0.48   | X   |  0       |  0  |   0            | X              | X     |
+|    0.33   | X   |  0       |  0  |   0            | 0              | X     |
+|    0.33   | X   |  0       |  0  |   X            | 0              | X     |
+|    0.33   | X   |  0       |  0  |   X            | 0              | X     |
+|    0.33   | X   |  0       |  0  |   0            | 0              | X     |
+|    0.19   | 0   |  0       |  0  |   0            | X              | X     |
+|    0.19   | 0   |  0       |  0  |   0            | X              | X     |
+|    0.19   | 0   |  0       |  0  |   X            | X              | X     |
+|    0.08   | 0   |  0       |  0  |   0            | 0              | X     |
+|    0.08   | 0   |  0       |  0  |   X            | 0              | X     |
+|    0.06   | X   |  X       |  0  |   X            | X              | X     |
+
+It seems that although the herd size alone does not satisfy the PH assumption, in presence of
+the sex variable it does. Apart from this, it is difficult to draw any definitive conclusions
+regarding how and why this happens. 
+
+
+
+
+
+
+
+
+
+
+
+### Cox models on healthy data
+
 
 
 
