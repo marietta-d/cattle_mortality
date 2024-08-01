@@ -21,6 +21,7 @@ library(fitdistrplus)
 library(logspline)
 library(fitur)
 library(actuar)
+library(frailtypack)
 ```
 
 ```{r}
