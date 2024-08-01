@@ -118,6 +118,7 @@ exhaustive_survreg_modelling <- function(training_data, aft_distributions, predi
       for (formula in formulas) {
         # Fit the AFT model
         tryCatch({
+          print(paste("[info] Running foruma: ", formula))
           surv_model <- survreg(as.formula(formula), data = training_data, dist = aft_dist)
           # Calculate AIC, log-likelihood, and BIC
           aic_value <- as.numeric(AIC(surv_model))
@@ -144,8 +145,6 @@ exhaustive_survreg_modelling <- function(training_data, aft_distributions, predi
           #   saveRDS(mdl,  file="temp/modelz.rds")  
           #   print("Data saved successful in temp/temp_data.rds and models in temp/modelz.rds :-)")
           # }
-          
-         
           
           i <- i + 1
         }, error = function(e) {
