@@ -4,7 +4,7 @@ by Marietta Dalamanga
 
 ## About
 
-The objective of this project is to..
+The objective of this project is to.. (TODO)
 
 ## Contents
 
@@ -21,4 +21,4 @@ The objective of this project is to..
 
 ## How to use
 
-sdfsdf
+TODO
