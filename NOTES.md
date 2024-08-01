@@ -99,14 +99,18 @@ regarding how and why this happens.
 
 
 
-
-
-
-
-
-
-
 ### Cox models on healthy data
+
+Overall, 63 models were run; the log-likelihood values obtained are not good. 
+The five best models are reported below:
+
+| Vars   |  AIC   |     BIC   |    loglik |
+| ------ | ------ | --------- | ------ |
+| DVO, Abattoir, Breed, Sex, Place of Death, Herd size | 39183922   | 39184338  |  -19591927 | 
+| DVO, Abattoir, Breed, Sex, Herd size |   39183945  |  39184349  |  -19591940 | 
+| DVO, Abattoir, Breed, Sex, Place of Death |   39184614  |  39185018  |  -19592274 | 
+| DVO, Abattoir, Breed, Sex |  39184637   | 39185028   | -19592286 | 
+| Abattoir, Breed, Sex, Place of Death, Herd size |   39186506  |  39186812  |  -19593228 | 
 
 
 
