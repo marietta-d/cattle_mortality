@@ -1,0 +1,103 @@
+---
+title: "Cox_modelling"
+author: "Marietta_Dalamanga"
+date: "2024-08-01"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(survival)
+library(survminer)
+library(ggplot2)
+library(ggpubr)
+library(fitdistrplus)
+library(logspline)
+library(fitur)
+library(actuar)
+```
+
+```{r}
+data <- read.csv("./data/common_conditions_breed_data.csv")
+```
+
+```{r}
+# Factor variables
+data[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy")] = 
+      lapply(data[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy")],
+                                function(x) as.factor(x))
+```
+
+
+```{r}
+cox_data <- data[, c(14, 15, 3, 6, 7, 8, 11, 13, 20)]
+predictors <- colnames(cox_data)[3:9]
+
+#' Formula with combination of k variables
+#' 
+#' @param predictors list of variables (strings)
+#' @param k tuple size
+#' @returns list of all possible formulas with k variables
+formulas_of_len <- function(predictors, k) {
+  mdl_prefix <- "Surv(days_alive, status) ~"
+  all_formulas_len_k <- c()
+  combs <- combn(predictors, k, simplify = FALSE)
+  num_combs <- length(combs)
+  for (j in 1:num_combs) {
+    comb_j <- combs[j][[1]]
+    comb_j_joined <- paste(comb_j, collapse = "+")
+    comb_j_joined <- paste(mdl_prefix, comb_j_joined)
+    all_formulas_len_k <- c(all_formulas_len_k, comb_j_joined)
+  }
+  return(all_formulas_len_k)
+}
+
+# TAKE ALL FORMULAS OF LENGTH 1
+formulas_1 <- formulas_of_len(predictors, 1)
+
+aic_cache <- c()
+bic_cache <- c()
+llik_cache <- c()
+formula_cache <- c()
+cox_mdl_cache <- list()
+test_ph_cache <- list()
+i <- 1
+# MAKE COX MODELS
+for (f in formulas_1) {
+  # 1. make the model
+  cox_mdl <- coxph(as.formula(f), data=cox_data)
+  # 2. compute statistics
+  aic_value <- as.numeric(AIC(cox_mdl))
+  bic_value <- as.numeric(BIC(cox_mdl))
+  llik_value <- as.numeric(logLik(cox_mdl))
+  # 3. Statistical tests
+  test_ph <- cox.zph(cox_mdl)
+  
+  
+  # 4. Print info
+  print("---------------------------------------------")
+  print(paste("Formula       : ", f))
+  print(paste("AIC           : ", aic_value))
+  print(paste("ell           : ", llik_value))
+  print(paste("BIC           : ", bic_value))
+  print(paste("significance* : ", as.numeric(test_ph$table[,"p"][1])))
+  print("* must be LARGE for the Cox assumptions to hold")
+  print(test_ph)
+  print(".............................................")
+  
+  aic_cache <- c(aic_cache, aic_value)
+  bic_cache <- c(bic_cache, bic_value)
+  llik_cache <- c(llik_cache, llik_value)
+  formula_cache <- c(formula_cache, f)
+  cox_mdl_cache[[i]] <- cox_mdl
+  test_ph_cache[[i]] <- test_ph
+  
+  i <- i + 1
+}
+```
