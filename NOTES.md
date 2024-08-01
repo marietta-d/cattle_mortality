@@ -56,19 +56,13 @@ The best five models are shown below
 
 Overall 127 models where generated and tested.
 
+| Vars   |  AIC   |     BIC   |    loglik |
+| ------ | ------ | --------- | ------ |
+| DVO, Abbatoir, Breed, Sex, Place of Death, # conditions, Herd size | 48514898  | 48515346  |  -24257413 | 
+| DVO, Abbatoir, Breed, Sex, # conditions, Herd size |   48514926 |   48515361 |   -24257428 | 
+| DVO, Abbatoir, Breed, Sex, Place of Death, # conditions |   48515655  |  48516090  |  -24257792 | 
+| DVO, Abbatoir, Breed, Sex, # conditions |   48515682   | 48516104  |  -24257807 | 
+| Abbatoir, Breed, Sex, Place of Death, # conditions, Herd size |   48518140 |   48518475 |   -24259043 | 
 
-aic_cache bic_cache llik_cache
-127  48514898  48515346  -24257413
-122  48514926  48515361  -24257428
-120  48515655  48516090  -24257792
-100  48515682  48516104  -24257807
-126  48518140  48518475  -24259043
-116  48518171  48518494  -24259060
-                                                                                                                    formula_cache
-127 Surv(days_alive, status) ~ DVO, Abbatoir, Breed, Sex, Place of Death, # conditions, Herd size
-122                         Surv(days_alive, status) ~ DVO, Abbatoir, Breed, Sex, # conditions, Herd size
-120                    Surv(days_alive, status) ~ DVO, Abbatoir, Breed, Sex, Place of Death, # conditions
-100                                            Surv(days_alive, status) ~ DVO, Abbatoir, Breed, Sex, # conditions
-126          Surv(days_alive, status) ~ Abbatoir, Breed, Sex, Place of Death, # conditions, Herd size
-116                                  Surv(days_alive, status) ~ Abbatoir, Breed, Sex, # conditions, Herd size
+
 
