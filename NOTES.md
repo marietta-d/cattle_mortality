@@ -8,7 +8,7 @@ Having taken all AFT models using all possible combinations
 of the variables
 
 - `DVO`
-- `Abbatoir`
+- `Abattoir`
 - `Sex`
 - `Place of Death`
 - `# conditions`
@@ -17,8 +17,8 @@ of the variables
 
 we found that the best two performing models (with high loglik) are
 
-- A model using `DVO`, `Abbatoir`, `Sex`, `Place of Death`, and `# conditions` and the Weibull distribution. This yielded a log-likelihood of 239673885 and AIC of -479347710
-- A model using `DVO`, `Abbatoir`, `Sex`, `Place of Death`, `# conditions`, `Herd size`. Here the log-likelihood was 53977144 and AIC was -107954227
+- A model using `DVO`, `Abattoir`, `Sex`, `Place of Death`, and `# conditions` and the Weibull distribution. This yielded a log-likelihood of 239673885 and AIC of -479347710
+- A model using `DVO`, `Abattoir`, `Sex`, `Place of Death`, `# conditions`, `Herd size`. Here the log-likelihood was 53977144 and AIC was -107954227
 
 The remaining models exhibited underwhelming log-likelihood and AIC/BIC results.
 
@@ -27,11 +27,11 @@ The five best models are shown below
 
 | Dist    | Vars   |  AIC   |     BIC   |   loglik |
 | ----    | ------ | ------ | --------- | ------ | 
-| Weibull | DVO, Abbatoir, Sex, Place of Death, # conditions                    | -479,347,710 | -479,347,338 | 239,673,885 |
-| Weibull | DVO, Abbatoir, Sex, Place of Death, # conditions, Herd size       	| -107,954,227 | -107,953,842 |  53,977,144 |
-| Weibull | DVO, Abbatoir, Breed, Sex, Place of Death, # conditions, Herd size  |   27,802,610 |   27,803,081 | -13,901,267 |
-| Weibull | DVO, Abbatoir, Breed, Sex, # conditions, Herd size                  |   27,802,638 |   27,803,097 | -13,901,282 |
-| Weibull | DVO, Abbatoir, Breed, Sex, Place of Death, # conditions             |   27,803,492 |   27,803,951 | -13,901,709 |
+| Weibull | DVO, Abattoir, Sex, Place of Death, # conditions                    | -479,347,710 | -479,347,338 | 239,673,885 |
+| Weibull | DVO, Abattoir, Sex, Place of Death, # conditions, Herd size       	| -107,954,227 | -107,953,842 |  53,977,144 |
+| Weibull | DVO, Abattoir, Breed, Sex, Place of Death, # conditions, Herd size  |   27,802,610 |   27,803,081 | -13,901,267 |
+| Weibull | DVO, Abattoir, Breed, Sex, # conditions, Herd size                  |   27,802,638 |   27,803,097 | -13,901,282 |
+| Weibull | DVO, Abattoir, Breed, Sex, Place of Death, # conditions             |   27,803,492 |   27,803,951 | -13,901,709 |
 
 
 
@@ -45,11 +45,11 @@ The best five models are shown below
 
 | Dist    | Vars  |  AIC   |     BIC   |   loglik |
 | ----    | ------ | ------ | --------- | ------ | 
-| Weibull | DVO, Abbatoir, Breed, Sex, Place of Death, Herd size     | 22,698,592 | 22,699,044 | -11,349,259 |
-| Weibull | DVO, Abbatoir, Breed, Sex, Herd size                     | 22,698,615 | 22,699,055 | -11,349,272 |
-| Weibull | DVO, Abbatoir, Breed, Sex, Place of Death                | 22,699,395 | 22,699,835 | -11,349,662 |
-| Weibull | DVO, Abbatoir, Breed, Sex                                | 22,699,417 | 22,699,845 | -11,349,674 |
-| Weibull | Abbatoir, Breed, Sex, Place of Death, Herd size          | 22,701,253 | 22,701,595 | -11,350,599 |
+| Weibull | DVO, Abattoir, Breed, Sex, Place of Death, Herd size     | 22,698,592 | 22,699,044 | -11,349,259 |
+| Weibull | DVO, Abattoir, Breed, Sex, Herd size                     | 22,698,615 | 22,699,055 | -11,349,272 |
+| Weibull | DVO, Abattoir, Breed, Sex, Place of Death                | 22,699,395 | 22,699,835 | -11,349,662 |
+| Weibull | DVO, Abattoir, Breed, Sex                                | 22,699,417 | 22,699,845 | -11,349,674 |
+| Weibull | Abattoir, Breed, Sex, Place of Death, Herd size          | 22,701,253 | 22,701,595 | -11,350,599 |
 
 
 ### Cox models on all data
@@ -61,11 +61,11 @@ The results are not satisfatory.
 
 | Vars   |  AIC   |     BIC   |    loglik |
 | ------ | ------ | --------- | ------ |
-| DVO, Abbatoir, Breed, Sex, Place of Death, # conditions, Herd size | 48514898  | 48515346  |  -24257413 | 
-| DVO, Abbatoir, Breed, Sex, # conditions, Herd size |   48514926 |   48515361 |   -24257428 | 
-| DVO, Abbatoir, Breed, Sex, Place of Death, # conditions |   48515655  |  48516090  |  -24257792 | 
-| DVO, Abbatoir, Breed, Sex, # conditions |   48515682   | 48516104  |  -24257807 | 
-| Abbatoir, Breed, Sex, Place of Death, # conditions, Herd size |   48518140 |   48518475 |   -24259043 | 
+| DVO, Abattoir, Breed, Sex, Place of Death, # conditions, Herd size | 48514898  | 48515346  |  -24257413 | 
+| DVO, Abattoir, Breed, Sex, # conditions, Herd size |   48514926 |   48515361 |   -24257428 | 
+| DVO, Abattoir, Breed, Sex, Place of Death, # conditions |   48515655  |  48516090  |  -24257792 | 
+| DVO, Abattoir, Breed, Sex, # conditions |   48515682   | 48516104  |  -24257807 | 
+| Abattoir, Breed, Sex, Place of Death, # conditions, Herd size |   48518140 |   48518475 |   -24259043 | 
 
 
 Using `cox.zph`, which implements the statistical test proposed by P. Grambsch and T. Therneau (1994),

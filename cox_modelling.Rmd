@@ -26,9 +26,6 @@ library(frailtypack)
 
 ```{r}
 data <- read.csv("./data/common_conditions_breed_data.csv")
-```
-
-```{r}
 # Factor variables
 data[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy")] = 
       lapply(data[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy")],
@@ -37,9 +34,6 @@ data[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Breed", "Sex", "Abattoir_._Died_on_F
 
 
 ```{r}
-cox_data <- data[, c(14, 15, 3, 6, 7, 8, 11, 13, 20)]
-predictors <- colnames(cox_data)[3:9]
-
 #' Formula with combination of k variables
 #' 
 #' @param predictors list of variables (strings)
@@ -73,58 +67,91 @@ all_possible_formulas <- function(predictors) {
   }
   return(all_formulas)
 }
+```
 
-
-# TAKE ALL FORMULAS OF LENGTH 1, 2, ..., n
-formulas <- all_possible_formulas(predictors)
-
-aic_cache <- c()
-bic_cache <- c()
-llik_cache <- c()
-formula_cache <- c()
-cox_mdl_cache <- list()
-test_ph_cache <- list()
-i <- 1
-# MAKE COX MODELS
-for (f in formulas) {
-  # 1. make the model
-  cox_mdl <- coxph(as.formula(f), data=cox_data)
-  # 2. compute statistics
-  aic_value <- as.numeric(AIC(cox_mdl))
-  bic_value <- as.numeric(BIC(cox_mdl))
-  llik_value <- as.numeric(logLik(cox_mdl))
-  # 3. Statistical tests
-  test_ph <- cox.zph(cox_mdl)
-  
-  
-  # 4. Print info
-  print("---------------------------------------------")
-  print(paste("Formula       : ", f))
-  print(paste("AIC           : ", aic_value))
-  print(paste("ell           : ", llik_value))
-  print(paste("BIC           : ", bic_value))
-  print(paste("significance* : ", as.numeric(test_ph$table[,"p"][1])))
-  print("* must be LARGE for the Cox assumptions to hold")
-  print(test_ph)
-  print(".............................................")
-  
-  aic_cache <- c(aic_cache, aic_value)
-  bic_cache <- c(bic_cache, bic_value)
-  llik_cache <- c(llik_cache, llik_value)
-  formula_cache <- c(formula_cache, f)
-  cox_mdl_cache[[i]] <- cox_mdl
-  test_ph_cache[[i]] <- test_ph
-  
-  i <- i + 1
+```{r}
+run_cox_models <- function(data, predictors, destination_folder) {
+    # TAKE ALL FORMULAS OF LENGTH 1, 2, ..., n
+    formulas <- all_possible_formulas(predictors)
+    aic_cache <- c()
+    bic_cache <- c()
+    llik_cache <- c()
+    formula_cache <- c()
+    cox_mdl_cache <- list()
+    test_ph_cache <- list()
+    i <- 1
+    # MAKE COX MODELS
+    for (f in formulas) {
+      print(f)
+      # 1. make the model
+      cox_mdl <- coxph(as.formula(f), data=data)
+      # 2. compute statistics
+      aic_value <- as.numeric(AIC(cox_mdl))
+      bic_value <- as.numeric(BIC(cox_mdl))
+      llik_value <- as.numeric(logLik(cox_mdl))
+      # 3. Statistical tests
+      
+      zphSuccess <- 0
+      tryCatch({
+        test_ph <- cox.zph(cox_mdl)
+        test_ph_cache[[i]] <- test_ph
+        zphSuccess <- 1
+      } , error = function(e) {
+          print("Error!")
+          print(e)
+          test_ph_cache[[i]] <- 0
+        }
+      )
+      
+      # 4. Print info
+      print("---------------------------------------------")
+      print(paste("Formula       : ", f))
+      print(paste("AIC           : ", aic_value))
+      print(paste("ell           : ", llik_value))
+      print(paste("BIC           : ", bic_value))
+      if (zphSuccess == 1) {
+        print(paste("significance* : ", as.numeric(test_ph$table[,"p"][1])))
+        print("* must be LARGE for the Cox assumptions to hold")
+        print(test_ph)
+      }
+      print(".............................................")
+      
+      aic_cache <- c(aic_cache, aic_value)
+      bic_cache <- c(bic_cache, bic_value)
+      llik_cache <- c(llik_cache, llik_value)
+      formula_cache <- c(formula_cache, f)
+      cox_mdl_cache[[i]] <- cox_mdl
+      
+      
+      i <- i + 1
+    }
+    
+    
+    model_meta <- data.frame(aic_cache, bic_cache, llik_cache, formula_cache)
+    print("Modelling complete - saving final data in destination folder")
+    meta_fname <- paste("models", destination_folder, "meta.rds", sep="/")
+    models_fname <- paste("models", destination_folder, "models.rds", sep="/")
+    statistical_tests_fname <- paste("models", destination_folder, "stats.rds", sep="/")
+    saveRDS(model_meta, file=meta_fname)  
+    saveRDS(cox_mdl_cache,  file=models_fname) 
+    saveRDS(test_ph_cache,  file=statistical_tests_fname) 
+    
+    return(list(model_meta, cox_mdl_cache, test_ph_cache))
 }
+```
 
-destination_folder <- "cox"
-model_meta <- data.frame(aic_cache, bic_cache, llik_cache, formula_cache)
-print("Modelling complete - saving final data in destination folder")
-meta_fname <- paste("models", destination_folder, "meta.rds", sep="/")
-models_fname <- paste("models", destination_folder, "models.rds", sep="/")
-statistical_tests_fname <- paste("models", destination_folder, "stats.rds", sep="/")
-saveRDS(model_meta, file=meta_fname)  
-saveRDS(cox_mdl_cache,  file=models_fname) 
-saveRDS(test_ph_cache,  file=statistical_tests_fname) 
+```{r}
+cox_data <- data[, c(14, 15, 3, 6, 7, 8, 11, 13, 20)]
+predictors <- colnames(cox_data)[3:9]
+destination_folder <- "cox_all_data"
+run_cox_models(cox_data, predictors, destination_folder)
+```
+
+
+```{r}
+cox_data_healthy <- cox_data %>% 
+  filter(Total_Conditions_per_Animal == 0)
+predictors_healthy <- colnames(cox_data_healthy)[c(3, 4, 5, 6, 7, 9)]
+destination_folder_healthy <- "cox_healthy"
+run_cox_models(cox_data_healthy, predictors_healthy, destination_folder_healthy)
 ```
