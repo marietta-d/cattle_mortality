@@ -98,7 +98,8 @@ all_possible_formulas <- function(predictors) {
 #' @param predictors list of predictors (variables) (list of str)
 #' @param destination_folder the metadata (AIC, BIC, etc) and the the models 
 #'                      will be stored in RDS files in models/{destination_folder}/
-#'
+#' @return list with two element: the first is a data frame with the 
+#'          metadata (AIC etc) and the second is our models
 exhaustive_survreg_modelling <- function(training_data, aft_distributions, predictors, destination_folder) {
     # Generate formulas for all combinations of predictors
     formulas <- all_possible_formulas(predictors)
@@ -107,7 +108,7 @@ exhaustive_survreg_modelling <- function(training_data, aft_distributions, predi
     bic <- c()
     llik <- c()
     mdl_name <- c()
-    mdl <- c()
+    mdl <- list()
     num_formulas <- length(formulas)
     num_distributions <- length(aft_distributions)
     num_combinations <- num_formulas * num_distributions
@@ -134,33 +135,38 @@ exhaustive_survreg_modelling <- function(training_data, aft_distributions, predi
           bic <- c(bic, bic_value)
           llik <- c(llik, llik_value)
           mdl_name <- c(mdl_name, model_name)
-          mdl <- c(mdl, surv_model)
+          mdl[[i]] <- surv_model
           print(".............................................")
           
-          if (i %% 5 == 0) {
-            print("Saving temporary data...")
-            saveRDS(data.frame(aic, bic, llik, mdl_name), file="temp/temp_data.rds")  
-            saveRDS(mdl,  file="temp/modelz.rds")  
-            print("Data saved successful in temp/temp_data.rds and models in temp/modelz.rds :-)")
-          }
+          # if (i %% 10 == 0) {
+          #   print("Saving temporary data...")
+          #   saveRDS(data.frame(aic, bic, llik, mdl_name), file="temp/temp_data.rds")  
+          #   saveRDS(mdl,  file="temp/modelz.rds")  
+          #   print("Data saved successful in temp/temp_data.rds and models in temp/modelz.rds :-)")
+          # }
+          
+         
           
           i <- i + 1
-          
         }, error = function(e) {
           print(e)
           print(paste("Error happened while trying to deal with dist: ", aft_dist, " for formula ", formula))
           i <- i + 1
         })
       }
+      
     }
+    
+    model_meta <- data.frame(aic, bic, llik, mdl_name)
     print("Modelling complete - saving final data in destination folder")
     meta_fname <- paste("models", destination_folder, "meta.rds", sep="/")
     models_fname <- paste("models", destination_folder, "models.rds", sep="/")
-    saveRDS(data.frame(aic, bic, llik, mdl_name), file=meta_fname)  
+    saveRDS(model_meta, file=meta_fname)  
     saveRDS(mdl,  file=models_fname)  
+    
+    return(list(model_meta, mdl))
 }
 ```
-
 
 ```{r}
 # Here we construct all possible formulas using these variables only...
@@ -169,8 +175,9 @@ predictors <- colnames(all_animals_no_conditions[3:9])
 destination_folder <- "all_data"
 # Define the AFT distributions you want to use
 aft_distributions <- c("exponential", "weibull", "lognormal", "loglogistic")
-exhaustive_survreg_modelling(all_animals_no_conditions, aft_distributions, predictors, destination_folder)
+results <- exhaustive_survreg_modelling(all_animals_no_conditions, aft_distributions, predictors, destination_folder)
 ```
+
 
 
 ```{r}
