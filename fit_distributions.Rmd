@@ -179,36 +179,6 @@ results <- exhaustive_survreg_modelling(all_animals_no_conditions, aft_distribut
 
 
 
-```{r}
-colnames(data_excluded_days)
-```
-
-```{r}
-destination_folder <- "test"
-
-fname
-```
-
-
-all animals no conditions
-```{r}
-mdl_name
-combinatorial_modelling_results_all <- data.frame(mdl_name, aic, bic, llik)
-```
-
-```{r}
-aft_model <-survreg()
-
-# Convert model_results into a dataframe
-aft_model_results_df <- data.frame(
-  Model = names(aft_comb_results),
-  AIC = sapply(aft_comb_results, function(x) x$AIC),
-  LogLikelihood = sapply(aft_comb_results, function(x) x$LogLikelihood),
-  BIC = sapply(aft_comb_results, function(x) x$BIC)
-)
-
-head(aft_model_results_df)
-```
 
 
 
@@ -491,18 +461,4 @@ for (var_name in variables[2:68]) {
   ggsave(img_fname, plot = my_plt_i,  width = 8, height = 6)
 }
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
