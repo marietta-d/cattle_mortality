@@ -96,10 +96,13 @@ Overall survival in days
 ```{r}
 baseline_km_all_data <- survfit(survival_object ~ 1, data = survival_data)
 summary(baseline_km_all_data)$table
+baseline_km_all_data_months <- survfit(Surv(months_alive, status) ~ 1, data=survival_data)
 ```
 
 ```{r}
 km_survival_time(baseline_km_all_data)
+km_survival_time(baseline_km_all_data_months)
+km_survival_time(survfit(Surv(years_alive, status) ~1, data=survival_data))
 ```
 
 
@@ -115,6 +118,26 @@ km_baseline_days
 ggsave("./data/combined_figs/baseline_km_all_data.png", plot=baseline_km_all_data$plot, width = 8, height = 6)
 ggsave("./data/combined_figs/risk_table_of_baseline_km_all_data.png", plot=baseline_km_all_data$table)
 ```
+
+```{r}
+km_baseline_months <- ggsurvplot(baseline_km_all_data_months,
+          pval = FALSE, conf.int = TRUE,
+          risk.table = TRUE, # Add risk table
+          surv.median.line = "hv", # Specify median survival
+          ggtheme = theme_bw(), # Change ggplot2 theme
+          palette = "blue")+
+  labs(title="Baseline survival in months", x="Days", y="Survival_probability") 
+km_baseline_months
+km_baseline_years <- ggsurvplot(survfit(Surv(years_alive, status) ~1, data=survival_data),
+          pval = FALSE, conf.int = TRUE,
+          risk.table = TRUE, # Add risk table
+          surv.median.line = "hv", # Specify median survival
+          ggtheme = theme_bw(), # Change ggplot2 theme
+          palette = "blue")+
+  labs(title="Baseline survival in years", x="Days", y="Survival_probability") 
+km_baseline_years
+```
+
 baseline survival for healthy and unhealthy animals
 
 ```{r}
