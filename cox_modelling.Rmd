@@ -205,8 +205,8 @@ run_cox_models(cox_data_beef_or_dairy, predictors_beef_or_dairy, destination_fol
 ```
 
 ```{r}
-cox_assumptions <- readRDS("models/cox_all_data/stats.rds")
-cox_models <- readRDS("models/cox_all_data/models.rds")
+cox_assumptions <- readRDS("models/cox_beef/stats.rds")
+cox_models <- readRDS("models/cox_beef/models.rds")
 cox_models[[7]]
 ```
 
@@ -320,5 +320,80 @@ for (i in 1:length(predictors_not_herd_id)-1) {
 ```{r}
 all_predictors[2:1]
 ```
+save shoenfeld
+DVO
+```{r}
+check_assumption <- readRDS("models/cox_all_data/stats.rds")
+plot(check_assumption[[1]])
+png(file="images/schoenfeld_dvo.png",
+width=600, height=350)
+plot(check_assumption[[1]])
+dev.off()
+```
+abattoir
+```{r}
+check_assumption[[2]]
+png(file="images/schoenfeld_abattoir.png",
+width=600, height=350)
+plot(check_assumption[[2]])
+dev.off()
+```
+
+breed
+```{r}
+check_assumption[[3]]
+png(file="images/schoenfeld_breed.png",
+width=600, height=350)
+plot(check_assumption[[3]])
+dev.off()
+```
+
+sex
+```{r}
+check_assumption[[4]]
+png(file="images/schoenfeld_sex.png",
+width=600, height=350)
+plot(check_assumption[[4]])
+dev.off()
+```
+
+place of death
+```{r}
+check_assumption[[5]]
+png(file="images/schoenfeld_place_of_death.png",
+width=600, height=350)
+plot(check_assumption[[5]])
+dev.off()
+```
+
+number of conditions
+```{r}
+check_assumption[[6]]
+png(file="images/schoenfeld_number_of_conditions.png",
+width=600, height=350)
+plot(check_assumption[[6]])
+dev.off()
+```
+
+herd size
+```{r}
+check_assumption[[7]]
+png(file="images/schoenfeld_herd_size.png",
+width=600, height=350)
+plot(check_assumption[[7]])
+dev.off()
+```
+
+
+
+
+
+
+
+
+
+
+
+
 
 

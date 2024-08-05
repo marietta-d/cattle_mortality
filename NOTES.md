@@ -38,7 +38,7 @@ The five best models are shown below
 
 ### AFT on healthy data
 
-Overall 508 models where generated and tested.
+Overall 252 models where generated and tested.
 Here all models exhibited very low values of log-likelihood (and, thus, very high values of AIC and BIC).
 
 The best five models are shown below
@@ -73,7 +73,7 @@ we made the following observations:
 
 1. In the univariate Cox models, the above statistical test showed that the proportional hazards (PH) assumption did not hold
 2. In the majority of multivariate models, the PH assumption did not hold
-3. In 13 of the multivariate models, the PH assumption was verified only for the herd size; details are shown below
+3. In 12 of the multivariate models, the PH assumption was verified only for the herd size; details are shown below
 
 
 | Herd size | DVO | Abattoir | Sex | Place of death | Num conditions | Breed | 
@@ -82,7 +82,6 @@ we made the following observations:
 |    0.49   | X   |  0       |  0  |   X            | X              | X     | 
 |    0.48   | X   |  0       |  0  |   0            | X              | X     |
 |    0.33   | X   |  0       |  0  |   0            | 0              | X     |
-|    0.33   | X   |  0       |  0  |   X            | 0              | X     |
 |    0.33   | X   |  0       |  0  |   X            | 0              | X     |
 |    0.33   | X   |  0       |  0  |   0            | 0              | X     |
 |    0.19   | 0   |  0       |  0  |   0            | X              | X     |
