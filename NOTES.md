@@ -112,6 +112,59 @@ The five best models are reported below:
 | DVO, Abattoir, Breed, Sex |  39184637   | 39185028   | -19592286 | 
 | Abattoir, Breed, Sex, Place of Death, Herd size |   39186506  |  39186812  |  -19593228 | 
 
+### Cox models with frailty
+
+Frailty: Abattoir, the proportional assumption doesn't hold for any of the models
+Overall, 63 models were run; the log-likelihood values obtained are not good. 
+The five best models are reported below:
+
+| Vars   |  AIC   |     BIC   |    loglik |
+| ------ | ------ | --------- | ------ |
+| DVO, Breed, Sex, #  Conditions, Herd size | 48514928 | 48515372| -24257428| 
+| DVO, Breed, Sex, #  Conditions |  48515683 |	48516115 | -24259060 |
+| Breed, Sex, # Conditions, Herd size |   48518173	| 48518505	| -24523926| 
+| Breed, Sex, # Conditions |  48519233 | 48519553	| -24259591| 
+| DVO, Breed, Sex, Herd size |   48529319 | 48529751	| -24264625|
+
+
+Frailty: Breed, the proportional assumption doesn't hold for any of the models
+Overall, 63 models were run; the log-likelihood values obtained are not good. 
+The five best models are reported below:
+
+| Vars   |  AIC   |     BIC   |    loglik |
+| ------ | ------ | --------- | ------ |
+| DVO, Abattoir, Sex, place of death, #  Conditions, Herd size | 48514900 | 48515360| -24257413| 
+| DVO, Abattoir, Sex, #  Conditions, Herd size  |  48514928 |	48515375 | -24257428 |
+| DVO, Abattoir, Sex, place of death, #  Conditions |   48515657	| 48516104	| -24257792| 
+| DVO, Abattoir, Sex, #  Conditions |  48515684 | 48516119	| -24257807| 
+| Abattoir, Sex, place of death, #  Conditions, Herd size |   48518142 | 48518490	| -24259043|
+
+
+Frailty: DVO, the proportional assumption doesn't hold for any of the models
+Overall, 63 models were run; the log-likelihood values obtained are not good. 
+The five best models are reported below:
+
+| Vars   |  AIC   |     BIC   |    loglik |
+| ------ | ------ | --------- | ------ |
+| Abattoir, Breed, Sex, place of death # Conditions, Herd size | 48514900 | 48515360| -24257413| 
+| Abattoir, Breed, Sex, # Conditions, Herd size  |  48514928 |	48515375 | -24257428 |
+| Abattoir, Breed, Sex, place of death # Conditions |   48515657	| 48516104	| -24257792| 
+| Abattoir, Breed, Sex, # Conditions |  48515684 | 48516119	| -24257807| 
+| Abattoir, Breed, Sex, place of death, Herd size|   48529283 | 48529730	| -24264605|
+
+
+Frailty: Number of health conditions, the proportional assumption doesn't hold for any of the models
+Overall, 63 models were run; the log-likelihood values obtained are not good. 
+The five best models are reported below:
+
+| Vars   |  AIC   |     BIC   |    loglik |
+| ------ | ------ | --------- | ------ |
+| DVO, Abattoir, Breed, Sex, Place of death, Herd size | 48514564 | 48515120| -24257237| 
+| DVO, Abattoir, Breed, Sex, Herd size |  48514592 |	48515135 | -24257252 |
+| DVO, Abattoir, Breed, Sex, Place of death |   48515317	| 48515860	| -24257615| 
+| DVO, Abattoir, Breed, Sex |  48515344 | 48515874	| -24257629| 
+| Abattoir, Breed, Sex, Place of death, Herd size|   48517802 | 48518246	| -24258865|
+
 
 
 

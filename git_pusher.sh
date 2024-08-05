@@ -6,5 +6,7 @@ git_message="Backup $dt"
 echo "$git_message"
 
 git add *.Rmd
+git add *.md
+git add *.sh
 git commit -m "$git_message"
 git push
