@@ -12,6 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 library(tidyverse)
+library(plyr)
 library(dplyr)
 library(tidyr)
 library(caret)
@@ -23,9 +24,11 @@ library(scales)
 memory.limit(size=70000)
 ```
 
+
 ```{r}
 survival_data_without_outliers <- read.csv("./data/new_combined_data_without_outliers.csv")
 ```
+
 
 I will drop the rows with na for now until Emily tells me what to do with this values
 ```{r}
@@ -104,4 +107,154 @@ save dataset in a csv_file to use it for parametric distributions
 ```{r}
 write.csv(common_conditions_breed_data, "./data/common_conditions_breed_data.csv", row.names = FALSE)
 ```
+
+
+
+### split the data set to overcome problems with AFT NULL coefficients(overdetermined models) and Cox PH assumption
+```{r}
+survival_data_without_outliers <- read.csv("./data/common_conditions_breed_data.csv")
+
+```
+
+
+```{r}
+summary(survival_data_without_outliers$days_alive)
+```
+
+
+create data partition
+
+```{r}
+set.seed(123)
+split_indeces <- createDataPartition(survival_data_without_outliers$days_alive, p=0.005, list=FALSE)
+split_data <- survival_data_without_outliers[split_indeces, ]
+summary(split_data$days_alive)
+big_data <- survival_data_without_outliers[-split_indeces, ]
+```
+
+
+```{r}
+
+summary(big_data$days_alive)
+summary(split_data$days_alive)
+```
+
+```{r}
+
+table(big_data$Dvo_Code)
+prop.table(table(big_data$Beef_or_Dairy))
+
+
+```
+
+change split data total conditions column to 0,1, 2 and >=3 conditions
+```{r}
+split_data$Total_Conditions_per_Animal[split_data$Total_Conditions_per_Animal >= 3] <- "3_or_more"
+split_data$Total_Conditions_per_Animal
+```
+
+```{r}
+write.csv(split_data, "./data/split_data.csv", row.names = FALSE)
+```
+
+change survival_data_without_outliers data total conditions column to 0,1, 2 and >=3 conditions
+```{r}
+survival_data_without_outliers$Total_Conditions_per_Animal[survival_data_without_outliers$Total_Conditions_per_Animal >= 3] <- "3_or_more"
+
+```
+
+change the name of the very long variables
+```{r}
+names(survival_data_without_outliers) <- c("Herd_Id", "Year", "Dvo_Code", "Month", "Animal_Id", "Abattoir", "Breed", "Sex", "Dob", "Dod", "place_of_death", "prod_type", "num_cond", "status",
+                                           "days_alive", "months_alive", "years_alive", "T_2M", "RH2M", "herd_size", "No", "PLEUR.PNEUMONIA.LOCAL", "OEDEMA", "NEPHRITIS", "NAD", "CONTAMINATION",
+                                           "TB.GENERALISED", "TB", "ABSCESS.PYAEMIA", "FLUKE.DAMAGE", "HYDRONEPHROSIS", "PLEUR.PNEUMONIA.GENERAL", "PETECHAE.HAEMORRHAGES", "INJECTION.SITES", 
+                                           "PERITONITIS", "PLEURISY", "FACTORY.DAMAGE", "PERICARDITIS", "BRUISING", "SCAR.TISSUE", "TELANGECTASIS", "RESIDUES", "ARTHRITIS", "FASCIOLIASIS", "ACTINO" )
+
+survival_data_without_outliers
+```
+
+change the values of Abattoir
+```{r}
+survival_data_without_outliers$Abattoir <- as.factor(survival_data_without_outliers$Abattoir)
+levels(survival_data_without_outliers$Abattoir)
+survival_data_without_outliers$Abattoir <- revalue(survival_data_without_outliers$Abattoir, c("32d8a591f643abd1ff6a998b128403c8962a55d8" ="ab_1", "332a6a1d2843f367c160a1c7c3fb2a28f0f8909e" ="ab_2",
+                                                                                              "432d3a852c6074754d640e8d1369a1c56b0d5805"="ab_3",  "4f71277e271f09349a4d6d5f6c05acf635652015"="ab_4",
+                                                                                              "52d480596328cca7948b6f1f31e1f2b18590cf10" ="ab_5", "568a97a7e2a6685902dd553c276b1837e0ebf06b"="ab_6",
+                                                                                              "6f7d51dd8564e05e279faa791f97894ef141a4db"="ab_7", "7a032bbcfa7447fb21edc6e6f8d7bab0bed1bb16"="ab_8",
+                                                                                              "87fc1df58026b8a228f9c4afa002b2b7722a8f09"="ab_9", "8a60fb1b9b40ed0fdc5d3c061e9388972f3bdce4"="ab_10",
+                                                                                              "9032d4760ad9a99eb868b5d854cbae1492401dda"="ab_11", "94003c4910d6c601a698a3258918fc822b88dd0d"="ab_12",
+                                                                                              "ae2f3299f13dc08c27a4bd4586901243017aa1c0"="ab_13", "ba747dbffafe62fb8bea541fd72df6d8c7afcb2f"="ab_14",
+                                                                                              "cdf0a11f70869c640bfe6c23935ff3da4acfb7b0"="ab_15", "f833f5d69610136a115182502764c803be97ee16"="ab_16"))
+survival_data_without_outliers
+```
+
+
+prepare training test and validation sets for machine learning
+```{r}
+set.seed(123)
+test_validation_indeces <- createDataPartition(survival_data_without_outliers$days_alive, p=0.4, list=FALSE)
+train_set <- survival_data_without_outliers[-test_validation_indeces, ]
+test_validation_set <- survival_data_without_outliers[test_validation_indeces, ]
+test_indeces <- createDataPartition(test_validation_set$days_alive, p=0.5, list=FALSE)
+test_set <- test_validation_set[test_indeces, ]
+validation_set <- test_validation_set[-test_indeces, ]
+```
+
+check the distribution of the response variable on three sets
+```{r}
+summary(survival_data_without_outliers$days_alive)
+summary(train_set$days_alive)
+summary(test_set$days_alive)
+summary(validation_set$days_alive)
+```
+
+```{r}
+paste("all observations are:", nrow(survival_data_without_outliers))
+paste("train st has", nrow(train_set), "observations")
+paste("test set has", nrow(test_set), "observations")
+paste("validation set has", nrow(validation_set), "observations")
+paste("sum of all three sets observations:", nrow(train_set)+nrow(test_set)+nrow(validation_set))
+```
+
+check the proportion of different variables on each set
+```{r}
+#Beef_or_Dairy
+prop.table(table(survival_data_without_outliers$Beef_or_Dairy))
+prop.table(table(train_set$Beef_or_Dairy))
+prop.table(table(test_set$Beef_or_Dairy))
+prop.table(table(validation_set$Beef_or_Dairy))
+#DVO
+prop.table(table(survival_data_without_outliers$Dvo_Code))
+prop.table(table(train_set$Dvo_Code))
+prop.table(table(test_set$Dvo_Code))
+prop.table(table(validation_set$Dvo_Code))
+#Breed
+prop.table(table(survival_data_without_outliers$Breed))
+prop.table(table(train_set$Breed))
+prop.table(table(test_set$Breed))
+prop.table(table(validation_set$Breed))
+#Place of death
+prop.table(table(survival_data_without_outliers$Abattoir_._Died_on_Farm))
+prop.table(table(train_set$Abattoir_._Died_on_Farm))
+prop.table(table(test_set$Abattoir_._Died_on_Farm))
+prop.table(table(validation_set$Abattoir_._Died_on_Farm))
+#Sex
+prop.table(table(survival_data_without_outliers$Sex))
+prop.table(table(train_set$Sex))
+prop.table(table(test_set$Sex))
+prop.table(table(validation_set$Sex))
+#Total_conditions_per_animal
+prop.table(table(survival_data_without_outliers$Total_Conditions_per_Animal))
+prop.table(table(train_set$Total_Conditions_per_Animal))
+prop.table(table(test_set$Total_Conditions_per_Animal))
+prop.table(table(validation_set$Total_Conditions_per_Animal))
+```
+save sets on csv files
+```{r}
+write.csv(train_set, "./data/train.csv", row.names = FALSE)
+write.csv(test_set, "./data/test.csv", row.names = FALSE)
+write.csv(validation_set, "./data/validation.csv", row.names = FALSE)
+```
+
+
 

@@ -1,0 +1,451 @@
+---
+title: "survival_forest"
+author: "Marietta_Dalamanga"
+date: "2024-08-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+load libraries
+```{r}
+if(!require(naivebayes)) install.packages("naivebayes")
+if(!require(tidyverse)) install.packages("tidyverse")
+if(!require(skimr)) install.packages("skimr")
+if(!require(FactoMineR)) install.packages("FactoMineR")
+if(!require(factoextra)) install.packages("factoextra")
+if(!require(mlbench)) install.packages("mlbench") # contains various datasets
+if(!require(ISLR)) install.packages("ISLR") # contains various datasets
+if(!require(caret)) install.packages("caret")
+if(!require(caretEnsemble)) install.packages("caretEnsemble")
+if(!require(RANN)) install.packages("RANN")
+if(!require(caTools)) install.packages("caTools")
+if(!require(rpart)) install.packages("rpart")
+if(!require(rpart.plot)) install.packages("rpart.plot")
+if(!require(ranger)) install.packages("ranger")
+if(!require(e1071)) install.packages("e1071")
+if(!require(arules)) install.packages("arules")
+if(!require(arulesViz)) install.packages("arulesViz")
+if(!require(mice)) install.packages("mice")
+if(!require(NbClust)) install.packages("NbClust")
+
+library(naivebayes)
+library(tidyverse)
+library(skimr)
+library(FactoMineR)
+library(factoextra)
+library(mlbench)
+library(caret)
+library(caretEnsemble)
+library(RANN)
+library(caTools)
+library(rpart)
+library(rpart.plot)
+library(ranger)
+library(e1071)
+library(arules)
+library(arulesViz)
+library(mice)
+library(NbClust)
+```
+
+
+
+
+
+
+load data
+```{r}
+train <- read.csv("./data/train.csv")
+test <-read.csv("./data/test.csv")
+validation <- read.csv(("./data/validation.csv"))
+```
+
+
+```{r}
+# keep only variables for the analysis
+colnames(train)
+vars <- colnames(train)[c(3, 6, 8, 11, 12, 13, 15, 20)]
+train_data <- train[, vars]
+test_data <- test[, vars]
+validation_data <- validation[, vars]]
+train_data
+```
+
+create a smaller data set to check everything is working
+```{r}
+set.seed(123)
+playground_ind <- createDataPartition(train_data$days_alive, p=0.01, list=FALSE)
+playground_data <- train_data[playground_ind, ]
+playground_val_ind <- createDataPartition(validation_data$days_alive, p=0.01, list=FALSE)
+playground_val <- validation_data[playground_val_ind, ]
+```
+
+
+```{r}
+# make factors
+train_data[,c("Dvo_Code", "Abattoir", "prod_type", "Sex", "place_of_death", "num_cond")] = 
+  lapply(train_data[,c("Dvo_Code","Abattoir","prod_type", "Sex", "place_of_death", "num_cond")],
+                                function(x) as.factor(x))
+
+validation_data[,c("Dvo_Code", "Abattoir", "prod_type", "Sex", "place_of_death", "num_cond")] = 
+  lapply(validation_data[,c("Dvo_Code", "Abattoir","prod_type", "Sex", "place_of_death", "num_cond")],
+                                function(x) as.factor(x))
+```
+
+
+
+Play with regression trees
+```{r}
+set.seed(1234)
+first_reg_tree <- rpart(days_alive ~ ., playground_data, method = "anova")
+print(first_reg_tree)
+```
+
+```{r}
+rpart.plot(first_reg_tree, yesno = TRUE)
+```
+```{r}
+# use caret to fit the model
+cs_trControl = trainControl(
+   method = "cv",
+   number = 10,
+   savePredictions = "final"       # save predictions for the optimal tuning parameter
+)
+
+set.seed(1234)
+cs_mdl_cart2 = train(
+   days_alive ~ ., 
+   data = playground_data, 
+   method = "rpart",
+   tuneLength = 5,
+   metric = "RMSE",
+   trControl = cs_trControl
+)
+print(cs_mdl_cart2)
+
+
+
+```
+```{r}
+#check the best cp model
+
+set.seed(1234)
+cs_mdl_cart2 = train(
+   days_alive ~ ., 
+   data = playground_data, 
+   method = "rpart",
+   tuneGrid = expand.grid(cp = seq(from = 0, to = 0.1, by = 0.01)),
+   metric = "RMSE",
+   trControl = cs_trControl
+)
+print(cs_mdl_cart2)
+
+
+
+```
+
+
+
+```{r}
+cs_mdl_cart2$results
+print(cs_mdl_cart2 ,cp=0.01)
+plot(cs_mdl_cart2, cp=0.01)
+
+```
+
+
+```{r}
+best_reg_tree <- update(cs_mdl_cart2, param = list(cp = .01))
+rpart.plot(best_reg_tree$finalModel)
+```
+
+```{r}
+
+rpart.plot(cs_mdl_cart2$finalModel)
+```
+
+```{r}
+plot(varImp(cs_mdl_cart2), main="Variable Importance with Simple Regression")
+varImp(cs_mdl_cart2)
+plot(varImp(best_reg_tree), main="Variable Importance with Simple Regression")
+varImp(best_reg_tree)
+```
+evaluate the model
+```{r}
+cs_preds_cart2 <- predict(cs_mdl_cart2, playground_test, type = "raw")
+data.frame(Actual = playground_test$days_alive, Predicted = cs_preds_cart2) %>%
+ggplot(aes(x = Actual, y = Predicted)) +
+   geom_point(alpha = 0.6, color = "cadetblue") +
+   geom_smooth(method = "loess", formula = "y ~ x", se=FALSE) + # if error with loess add se=FALSE
+   geom_abline(intercept = 0, slope = 1, linetype = 2) +
+   labs(title = "Carseats CART, Predicted vs Actual (caret)")
+```
+
+evaluate the model
+```{r}
+playground_test
+best_reg_tree$finalModel
+cs_preds_cart2 <- predict(best_reg_tree, playground_test, type = "raw")
+data.frame(Actual = playground_test$days_alive, Predicted = best_reg_tree) %>%
+ggplot(aes(x = Actual, y = Predicted)) +
+   geom_point(alpha = 0.6, color = "cadetblue") +
+   geom_smooth(method = "loess", formula = "y ~ x") #, se=FALSE) + # if error with loess add se=FALSE
+   geom_abline(intercept = 0, slope = 1, linetype = 2) +
+   labs(title = "Carseats CART, Predicted vs Actual (caret)")
+```
+
+
+
+```{r}
+sd(playground_data$days_alive)
+cs_rmse_cart2 <- RMSE(pred = cs_preds_cart2, obs = playground_test$days_alive)
+cs_rmse_cart2
+```
+
+
+separate response variable from predictors for train and validation set
+```{r}
+
+train_predictors <- train_data[, c(1, 2, 3, 4, 5, 8)]
+train_response <- train_data[, 7]
+
+
+val_predictors <- validation_data[, c(1, 2, 3, 4, 5, 8)]
+val_response <- validation_data[, 7]
+```
+
+
+
+```{r}
+set.seed(123)
+# Create train/test indexes which will be used in 5-Fold CV
+myFolds_regression <- createFolds(train_response, k = 5)
+
+# Check the folds
+myFolds_regression %>% 
+  map(
+    function(x){
+      summary(train_response[x])
+    }
+  )
+
+```
+
+
+```{r}
+# create the control for the regression
+
+ctrl_regression <- trainControl(
+  method = "cv", # Used for configuring resampling method: in this case cross validation 
+  number = 5, # Instruct that it is 5 fold-cv
+  index = myFolds_regression, # Folds' indexes
+  verboseIter = TRUE, # Print output of each step
+  savePredictions = TRUE, 
+  preProcOptions = list(thresh = 0.8) # In case that PCA preprocessing option is selected in the train() function, Indicates a cutoff for the cumulative percent of variance to be retained by PCA
+)
+```
+
+
+first random forest
+```{r}
+set.seed(123)
+
+# The list of configuration parameters for the ranger model: 
+modelLookup("ranger")
+
+# Perform data-preprocessing step which will perform data centering & scaling and remove variables with zero variance
+# Train RANGER model using default CARET parametres
+model_ranger_default <- train(
+  x = train_predictors, # Predictors dataset
+  y = train_response, # Response variable
+  method = "ranger", # ML algorithm: rpart, knn, nb, ranger, glm, lm, etc. 
+  trControl = ctrl_regression, # Training configuration
+  importance = "impurity", # This needs to be added only for `ranger` for identifying variable importance
+  preProcess = c("zv", "center", "scale") # zv - remove predictors with zero variance
+                                          # center, scale - centering and scaling data 
+)
+
+# Model summary
+model_ranger_default
+
+# The best tuning parameter(s)
+model_ranger_default$bestTune
+model_ranger_default$results
+```
+
+
+```{r}
+
+# we cannot use tuneLength >6 because we have only 6 predictors
+model_ranger_auto <- train(
+  x = train_predictors, # Predictors dataset
+  y = train_response, # Response variable
+  method = "ranger", # ML algorithm: rpart, knn, nb, ranger, glm, lm, etc. 
+  trControl = ctrl_regression, # Training configuration
+  importance = "impurity", # This needs to be added only for `ranger` for identifying variable importance
+  tuneLength = 3, # CARET's random selection of tuning parametres
+  # tuneGrid = expand.grid()
+  preProcess = c("zv", "center", "scale") # zv - remove predictors with zero variance
+                                          # center, scale - centering and scaling data 
+)
+
+# Model summary
+model_ranger_auto
+
+# The best tuning parameter(s)
+model_ranger_auto$bestTune
+
+
+```
+
+
+```{r}
+
+# We can see that the model `model_ranger_default` performs slightly better than the model `model_ranger_auto`
+model_ranger_default$results[which.min(model_ranger_default$results$RMSE), ] 
+# Select the one with min RMSE!
+model_ranger_auto$results[which.min(model_ranger_auto$results$RMSE), ]
+# Inspect the impact of different hyperparametres settings on predictive performances of these two models
+plot(model_ranger_default)
+plot(model_ranger_auto)
+
+# Inspect the variable importance, in the `model_ranger_boston_default` model
+plot(varImp(model_ranger_default))
+
+# From the summary output, we can see that the model `model_ranger_default` has the slightly better performance
+# We can also see that the lowest RMSE scores are obtained for mtry = 4
+
+```
+
+```{r}
+# As not all mtry numbers are considered, let's instruct CARET to use 2 <= mtry <= 5, 
+# and select the one for which the model has the lowest RMSE score
+model_ranger_manual <- train(
+  x = train_predictors, # Predictors dataset
+  y = train_response, # Response variable
+  method = "ranger", # ML algorithm: rpart, knn, nb, ranger, glm, lm, etc. 
+  trControl = ctrl_regression, # Training configuration
+  importance = "impurity", # This needs to be added only for `ranger` for identifying variable importance
+  tuneGrid = expand.grid(
+    mtry = 2:5,
+    splitrule = c("variance", "extratrees"),
+    min.node.size = 5 # see documentation: min.node.size = 5 for regression and min.node.size = 1 for classification
+  ),
+  preProcess = c("zv", "center", "scale") # zv - remove predictors with zero variance
+                                          # center, scale - centering and scaling data 
+)
+
+
+# Model summary
+model_ranger_manual
+model_ranger_manual$results[which.min(model_ranger_manual$results$RMSE), ] 
+
+# The optimal hyperparameter value(s)
+model_ranger_manual$bestTune
+
+# Inspect the impact of different hyperparameter settings on predictive performances of the model
+plot(model_ranger_manual)
+```
+
+
+```{r}
+
+# Let's compare the performance of these 3 models
+# Comment your findings
+ranger_resample <- resamples(
+  list(
+    ranger_default = model_ranger_default,
+    ranger_auto = model_ranger_auto,
+    ranger_manual = model_ranger_manual
+  )
+)
+
+summary(ranger_resample)
+
+dotplot(ranger_resample)
+bwplot(ranger_resample)
+
+# all models perform similarly 
+```
+
+
+```{r}
+small_val_predictors_indeces<- createDataPartition(val_response, p=0.001, list=FALSE)
+small_val_pred <- val_predictors[small_val_predictors_indeces, ]
+small_val_response <- val_response[small_val_predictors_indeces]
+
+ranger_preds <- predict(model_ranger_default, newdata = small_val_pred)
+
+# Calculate RMSE
+RMSE(pred = ranger_preds, obs = small_val_response)
+
+# Calculate R^2
+R2(pred = ranger_preds, obs = small_val_response)
+
+# Plot the observed dataset against the predicted ones
+# black line = observed
+# red line = predicted
+data.frame(
+  id = 1:length(small_val_response),
+  observed = small_val_response,
+  predicted = ranger_preds
+) %>% 
+  ggplot() +
+  geom_line(aes(x = id, y = observed)) +
+  geom_line(aes(x = id, y = predicted), colour = "red")
+```
+Survival random forest
+```{r}
+library("randomForestSRC")
+library("survival")
+
+```
+
+create dataset
+```{r}
+colnames(train)
+vars_surv <- colnames(train)[c(3, 6, 8, 11, 12, 13,14, 15, 20)]
+train_surv <- train[, vars_surv]
+val_surv <- validation[, vars_surv]
+
+# make factors
+train_surv[,c("Dvo_Code", "Abattoir", "prod_type", "Sex", "place_of_death", "num_cond")] = 
+  lapply(train_surv[,c("Dvo_Code","Abattoir","prod_type", "Sex", "place_of_death", "num_cond")],
+                                function(x) as.factor(x))
+
+val_surv[,c("Dvo_Code", "Abattoir", "prod_type", "Sex", "place_of_death", "num_cond")] = 
+  lapply(val_surv[,c("Dvo_Code", "Abattoir","prod_type", "Sex", "place_of_death", "num_cond")],
+                                function(x) as.factor(x))
+```
+
+```{r}
+set.seed(123)
+playground_ind <- createDataPartition(train_surv$days_alive, p=0.10, list=FALSE)
+playground_train <- train_surv[playground_ind, ]
+playground_val_ind <- createDataPartition(val_surv$days_alive, p=0.10, list=FALSE)
+playground_val <- val_surv[playground_val_ind, ]
+```
+
+
+
+```{r}
+a = Sys.time()
+RSurvF_obj <- rfsrc.fast(Surv(days_alive,status)~., playground_train, ntree = 100,  membership = TRUE, importance=TRUE)
+b = Sys.time()    
+paste0(round(as.numeric(difftime(time1 = b, time2 = a, units = "secs")), 3), " Seconds")
+
+RSurvF_obj
+```
+
+
+```{r}
+get.cindex(RSurvF_obj$yvar[,1], RSurvF_obj$yvar[,2], RSurvF_obj$predicted.oob)
+```
+
+
+
+
+

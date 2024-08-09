@@ -27,16 +27,18 @@ library(JM)
 
 
 ```{r}
-data <- read.csv("./data/common_conditions_breed_data.csv")
+data <- read.csv("./data/split_data.csv")
 excluded_days <- data$days_alive <=1
 data_excluded_days <- data[!excluded_days, ]
 summary(data_excluded_days$days_alive)
+colnames(data_excluded_days)
 ```
 
 
+
 ```{r}
-data_excluded_days[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy")] = 
-  lapply(data_excluded_days[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy")],
+data_excluded_days[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy",  "Total_Conditions_per_Animal")] = 
+  lapply(data_excluded_days[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy",  "Total_Conditions_per_Animal")],
                                 function(x) as.factor(x))
 healthy_animals <- data_excluded_days %>%
   filter(Total_Conditions_per_Animal==0)
@@ -53,9 +55,6 @@ all_animals_no_conditions <- data_excluded_days[, c(14, 15, 3, 6, 7, 8, 11, 13, 
 
 
 ```{r}
-# Here we construct all possible formulas using these variables only...
-predictors <- colnames(healthy_animals[3:8])
-
 #' Formula with combination of k variables
 #' 
 #' @param predictors list of variables (strings)
@@ -135,6 +134,7 @@ exhaustive_survreg_modelling <- function(training_data, aft_distributions, predi
           print(paste("AIC        : ", aic_value))
           print(paste("ell        : ", llik_value))
           print(paste("BIC        : ", bic_value))
+          print(surv_model)
           aic <- c(aic, aic_value)
           bic <- c(bic, bic_value)
           llik <- c(llik, llik_value)
@@ -170,15 +170,42 @@ exhaustive_survreg_modelling <- function(training_data, aft_distributions, predi
 }
 ```
 
+
 ```{r}
 # Here we construct all possible formulas using these variables only...
+
 predictors <- colnames(all_animals_no_conditions[3:9])
+
 # destination folder for final model objects
-destination_folder <- "all_data"
+destination_folder <- "aft_split_data"
 # Define the AFT distributions you want to use
 aft_distributions <- c("exponential", "weibull", "lognormal", "loglogistic")
 results <- exhaustive_survreg_modelling(all_animals_no_conditions, aft_distributions, predictors, destination_folder)
 ```
+
+```{r}
+# Here we construct all possible formulas using these variables only...
+colnames(healthy_animals)
+predictors <- colnames(healthy_animals[3:8])
+
+# destination folder for final model objects
+destination_folder <- "aft_split_healthy"
+# Define the AFT distributions you want to use
+aft_distributions <- c("exponential", "weibull", "lognormal", "loglogistic")
+results <- exhaustive_survreg_modelling(healthy_animals, aft_distributions, predictors, destination_folder)
+```
+
+
+
+```{r}
+meta <- readRDS("models/aft_split_data//meta.rds")
+models <- readRDS("models/aft_split_data//models.rds")
+meta <- meta[order(meta$llik, decreasing = TRUE),]
+meta
+models[254]
+```
+
+
 
 
 weibull all combinations with DVO as frailty
@@ -191,8 +218,10 @@ predictors <- colnames(frailty_data[5:10])
 all_possible_formulas(predictors)
 
 surv_model <- survreg(Surv(days_alive, status) ~ Sex + frailty.gamma(Dvo_Code), data = frailty_data, dist = "weibull")
-survival_object <- Surv(frailty_data$days_alive, frailty_data$status) ~ frailty_data$Sex +frailty_data$Abattoir+ frailty_data$Abattoir_._Died_on_Farm + frailty_data$Total_Conditions_per_Animal
-weibull.frailty(survival_object, id="Dvo_Code", data=frailty_data)
+survival_object <- Surv(frailty_data$days_alive, frailty_data$status) ~ frailty_data$Sex +frailty_data$Abattoir+ frailty_data$Breed + frailty_data$Abattoir_._Died_on_Farm + frailty_data$Total_Conditions_per_Animal + frailty_data$AvgOftotal_animals
+dvo_frailty <- weibull.frailty(survival_object, id="Dvo_Code", data=frailty_data)
+dvo_frailty
+
 ```
 
 ```{r}
