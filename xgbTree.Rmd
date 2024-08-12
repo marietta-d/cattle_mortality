@@ -152,3 +152,84 @@ saveRDS(xboost_all, "./models/xgbTree/tuning.rds")
 ```
 
 
+separate into healthy and unhealthy animals and use
+```{r}
+unhealthy_train_data <- train_data %>%
+  filter(num_cond== "1" | num_cond == "2" | num_cond=="3_or_more")
+
+healthy_train_data <- train_data %>%
+  filter(num_cond =="0")
+
+unhealthy_val_data <- validation_data %>%
+  filter(num_cond== "1" | num_cond == "2" | num_cond=="3_or_more")
+
+healthy_val_data <- validation_data %>%
+  filter(num_cond =="0")
+```
+
+
+dummify the healthy datasets
+```{r}
+dmy_healthy_train <- dummyVars(" ~ .", data = healthy_train_data)
+trsf_healthy_train <- data.frame(predict(dmy, newdata = healthy_train_data))
+dmy_healthy_val <- dummyVars(" ~ .", data = healthy_val_data)
+trsf_healthy_val <- data.frame(predict(dmy_val, newdata = healthy_val_data))
+
+```
+
+
+```{r}
+set.seed(123)
+playground_ind <- createDataPartition(trsf_healthy_train$days_alive, p=0.10, list=FALSE)
+playground_data <- trsf_healthy_train[playground_ind, ]
+playground_val_ind <- createDataPartition(trsf_healthy_val$days_alive, p=0.10, list=FALSE)
+playground_val <- trsf_healthy_val[playground_val_ind, ]
+```
+
+
+
+separate response variable from predictors for train and validation set
+```{r}
+colnames(playground_data)
+train_healthy_predictors <- playground_data[, c(1:31,37)]
+train_healthy_response <- playground_data[, 36]
+
+
+val_healthy_predictors <- playground_val[, c(1:31, 37)]
+val_healthy_response <- playground_val[, 36]
+```
+
+
+
+```{r}
+set.seed(123)
+# Create train/test indexes which will be used in 5-Fold CV
+myFolds_regression <- createFolds(train_healthy_response, k = 5)
+
+# Check the folds
+myFolds_regression %>% 
+  map(
+    function(x){
+      summary(train_response[x])
+    }
+  )
+```
+
+
+```{r}
+xboost_healthy <- caret::train(
+  x = train_healthy_predictors,
+  y = train_healthy_response,
+  trControl = ctrl_regression,
+  tuneGrid = hyperparam_grid,
+  method = "xgbTree", #  this says we want XGB
+  preProcess = c("zv")
+)
+
+```
+
+
+save tuning 
+```{r}
+saveRDS(xboost_healthy, "./models/xgbTree/healthy_tuning.rds")
+```
