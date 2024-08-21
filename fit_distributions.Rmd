@@ -27,7 +27,7 @@ library(JM)
 
 
 ```{r}
-data <- read.csv("./data/split_data.csv")
+data <- read.csv("./data/common_conditions_breed_data.csv")
 excluded_days <- data$days_alive <=1
 data_excluded_days <- data[!excluded_days, ]
 summary(data_excluded_days$days_alive)
@@ -198,11 +198,10 @@ results <- exhaustive_survreg_modelling(healthy_animals, aft_distributions, pred
 
 
 ```{r}
-meta <- readRDS("models/aft_split_data//meta.rds")
-models <- readRDS("models/aft_split_data//models.rds")
+meta <- readRDS("models/aft_split_data/meta.rds")
+models <- readRDS("models/aft_split_data/models.rds")
 meta <- meta[order(meta$llik, decreasing = TRUE),]
-meta
-models[254]
+print(meta)
 ```
 
 

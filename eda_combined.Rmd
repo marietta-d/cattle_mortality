@@ -1642,7 +1642,8 @@ colSums(unhealthy[, 21:92])
 ```
 # Create data frame for all conditions
 ```{r}
-conditions_list <- colnames(unhealthy[21:92])
+colnames(unhealthy_data)
+conditions_list <- colnames(unhealthy_data[21:41])
 num_conditions <- length(conditions_list)
 
 
@@ -1650,17 +1651,17 @@ all_conditions_df <- data_frame()
 
 for (i in 1:num_conditions) {
   condition <- conditions_list[i]
-  condition_slice <- unhealthy %>%
-    filter(unhealthy[condition]>0) %>%
-    summarise(animals = n(),
+  condition_slice <- unhealthy_data %>%
+    filter(unhealthy_data[condition]>0) %>%
+    dplyr::summarise(animals = n(),
               mean_age = mean(days_alive),
               prcnt_male = mean(Sex == "M") * 100, 
               prcnt_female = mean(Sex == "F") * 100, 
               prcnt_bull = mean(Sex == "B") * 100, 
-              prcnt_beef = mean(Beef_or_Dairy == "Beef") * 100, 
-              prcnt_dairy = mean(Beef_or_Dairy == "Dairy") * 100, 
-              prcnt_abattoir = mean(Abattoir_._Died_on_Farm == "Abattoir") * 100, 
-              prcnt_farm = mean(Abattoir_._Died_on_Farm == "Died on Farm") * 100)
+              prcnt_beef = mean(prod_type == "Beef") * 100, 
+              prcnt_dairy = mean(prod_type == "Dairy") * 100, 
+              prcnt_abattoir = mean(place_of_death == "Abattoir") * 100, 
+              prcnt_farm = mean(place_of_death == "Died on Farm") * 100)
   row.names(condition_slice) <- condition
   all_conditions_df <- rbind(all_conditions_df, condition_slice)
 }
@@ -1668,7 +1669,7 @@ all_conditions_df %>%
   arrange(desc(animals))
 summary(all_conditions_df$mean_age)
 all_conditions_df[all_conditions_df$mean_age >2000,]
-summary(unhealthy$days_alive)
+summary(unhealthy_data$days_alive)
 ```
 
 ```{r}

@@ -27,25 +27,27 @@ library(coin)
 The data we will use is the dataset with the most common conditions (conditions found on more than 2000 animals) and breeds(8 breeds account for the 91.5% of all animals)
 ```{r}
 
-survival_data <- read.csv("./data/common_conditions_breed_data.csv")
+survival_data <- read.csv("common_conditions_breed_data.csv")
 ```
 
 ```{r}
 colnames(survival_data)
+
 ```
 
 All categorical variables as factor
 ```{r}
-survival_data[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy")] = 
-  lapply(survival_data[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy")],
+survival_data[,c("Herd_Id", "Abattoir", "Dvo_Code", "Breed", "Sex", "place_of_death", "prod_type")] = 
+  lapply(survival_data[,c("Herd_Id", "Abattoir", "Dvo_Code", "Breed", "Sex", "place_of_death", "prod_type")],
                                 function(x) as.factor(x))
 ```
 
 ```{r}
+
 healthy_data <- survival_data %>%
-  filter(Total_Conditions_per_Animal == 0)
+  filter(num_cond == 0)
 unhealthy_data <- survival_data %>%
-  filter((Total_Conditions_per_Animal >0))
+  filter((num_cond >0))
 ```
 
 We will perform Kaplan-Meier analysis on days alive
@@ -100,6 +102,20 @@ baseline_km_all_data_months <- survfit(Surv(months_alive, status) ~ 1, data=surv
 ```
 
 ```{r}
+baseline_data_plot <- data.frame(baseline_km_all_data$time, baseline_km_all_data$surv, baseline_km_all_data$upper, baseline_km_all_data$lower)
+write.csv(baseline_data_plot, paste("kaplan_meier/baseline_data_plot.csv", sep=""), row.names = FALSE)
+
+```
+
+
+```{r}
+p <- ggplot(baseline_data_plot, aes(x=baseline_km_all_data.time, y=baseline_km_all_data.surv)) +
+  geom_line()
+p
+```
+
+
+```{r}
 km_survival_time(baseline_km_all_data)
 km_survival_time(baseline_km_all_data_months)
 km_survival_time(survfit(Surv(years_alive, status) ~1, data=survival_data))
@@ -115,8 +131,8 @@ km_baseline_days <- ggsurvplot(baseline_km_all_data,
           palette = "blue")+
   labs(title="Baseline survival in days", x="Days", y="Survival_probability") 
 km_baseline_days
-ggsave("./data/combined_figs/baseline_km_all_data.png", plot=baseline_km_all_data$plot, width = 8, height = 6)
-ggsave("./data/combined_figs/risk_table_of_baseline_km_all_data.png", plot=baseline_km_all_data$table)
+ggsave("./images/new_km/baseline_km_all_data.png", plot=baseline_km_all_data$plot, width = 8, height = 6)
+ggsave("./images/new_km/brisk_table_of_baseline_km_all_data.png", plot=baseline_km_all_data$table)
 ```
 
 ```{r}
@@ -145,6 +161,13 @@ baseline_km_healthy <- survfit(healthy_object ~ 1, data = healthy_data)
 baseline_km_unhealthy <- survfit(unhealthy_object ~ 1, data = unhealthy_data)
 summary(baseline_km_healthy)$table
 summary(baseline_km_unhealthy)$table
+
+healthy_baseline_data_plot <- data.frame(baseline_km_healthy$time, baseline_km_healthy$surv, baseline_km_healthy$upper, baseline_km_healthy$lower)
+write.csv(healthy_baseline_data_plot, paste("kaplan_meier/healthy_baseline_data_plot.csv", sep=""), row.names = FALSE)
+
+unhealthy_baseline_data_plot <- data.frame(baseline_km_unhealthy$time, baseline_km_unhealthy$surv, baseline_km_unhealthy$upper, baseline_km_unhealthy$lower)
+write.csv(unhealthy_baseline_data_plot, paste("kaplan_meier/unhealthy_baseline_data_plot.csv", sep=""), row.names = FALSE)
+
 ```
 
 ```{r}
@@ -157,20 +180,36 @@ all_baseline_curves <- ggsurvplot(fit, data = survival_data, combine = TRUE, # C
            censor = FALSE,                     # Remove censor points
            tables.theme = theme_cleantable(),  # Clean risk table
            )
-ggsave("./data/combined_figs/all_baseline_curves.png", plot=all_baseline_curves$plot, width = 8, height = 6)
-ggsave("./data/combined_figs/risk_table_of_all_baseline_curves.png", plot=all_baseline_curves$table)
+ggsave("./images/new_km/all_baseline_curves.png", plot=all_baseline_curves$plot, width = 8, height = 6)
+ggsave("./images/new_km/risk_table_of_all_baseline_curves.png", plot=all_baseline_curves$table)
 all_baseline_curves
 ```
 
 survival curve on healthy and unhealthy animals based on total conditions
 ```{r}
 dat_all <- survival_data
-dat_all$Total_Conditions_per_Animal[dat_all$Total_Conditions_per_Animal >0] <- 'unhealthy'
-dat_all$Total_Conditions_per_Animal[dat_all$Total_Conditions_per_Animal == 0] <- 'healthy'
+dat_all$num_cond[dat_all$num_cond >0] <- 'unhealthy'
+dat_all$num_cond[dat_all$num_cond == 0] <- 'healthy'
 colnames(dat_all)
-dat_all <- rename(dat_all, Health_status= Total_Conditions_per_Animal)
+dat_all$Health_status <- dat_all$num_cond
+dat_all$num_cond <- survival_data$num_cond
+dat_all
+
 healthy_vs_unhealthy <- survfit(survival_object ~ Health_status, data = dat_all)
 summary(healthy_vs_unhealthy)$table
+healthy_vs_unhealthy
+healthy_vs_unhealthy[1]
+```
+
+
+```{r}
+
+healthy_plot_data <- data.frame(time=healthy_vs_unhealthy[1]$time, surv=healthy_vs_unhealthy[1]$surv, upper=healthy_vs_unhealthy[1]$upper, lower=healthy_vs_unhealthy[1]$lower)
+unhealthy_plot_data <- data.frame(time=healthy_vs_unhealthy[2]$time, surv=healthy_vs_unhealthy[2]$surv, upper=healthy_vs_unhealthy[2]$upper, lower=healthy_vs_unhealthy[2]$lower)
+healthy_plot_data
+
+write.csv(healthy_plot_data, paste("kaplan_meier/healthy_vs_unhealthy_data.csv", sep=""), row.names = FALSE)
+write.csv(unhealthy_plot_data, paste("kaplan_meier/unhealthy_vs_healthy_data.csv", sep=""), row.names = FALSE)
 ```
 
 
@@ -186,8 +225,8 @@ curve_healthy_vs_unhealthy <- ggsurvplot(healthy_vs_unhealthy,
           )+
     labs(title="Survival in days by health status", x="Days", y="Survival_probability") 
 curve_healthy_vs_unhealthy
-ggsave("./data/combined_figs/curve_healthy_vs_unhealthy.png", plot=curve_healthy_vs_unhealthy$plot, width = 8, height = 6)
-ggsave("./data/combined_figs/risk_table_curve_healthy_vs_unhealthy.png", plot=curve_healthy_vs_unhealthy$table)
+ggsave("./images/new_km/curve_healthy_vs_unhealthy.png", plot=curve_healthy_vs_unhealthy$plot, width = 8, height = 6)
+ggsave(".//images/new_km/risk_table_curve_healthy_vs_unhealthy.png", plot=curve_healthy_vs_unhealthy$table)
 ```
 
 
@@ -212,14 +251,40 @@ all_baseline_curves1
 
 sex_fit <- survfit(survival_object ~ Sex, data=survival_data)
 summary(sex_fit)$table
+sex_fit[2]
+Bulls <- data.frame(b_time=sex_fit[1]$time, b_surv = sex_fit[1]$surv, b_upper=sex_fit[1]$upper, b_lower=sex_fit[1]$lower)
+Females <- data.frame(f_time=sex_fit[2]$time, f_surv = sex_fit[2]$surv, f_upper=sex_fit[2]$upper, f_lower=sex_fit[2]$lower)
+Males <- data.frame(m_time = sex_fit[3]$time, m_surv = sex_fit[3]$surv, m_upper=sex_fit[3]$upper, m_lower=sex_fit[3]$lower)
 
+write.csv(Bulls, paste("kaplan_meier/Bulls.csv", sep=""), row.names = FALSE)
+write.csv(Females, paste("kaplan_meier/Females.csv", sep=""), row.names = FALSE)
+write.csv(Males, paste("kaplan_meier/Male.csv", sep=""), row.names = FALSE)
 ```
 
 ```{r}
+healthy_data
 sex_fit_healthy <- survfit(healthy_object ~ Sex, data=healthy_data)
 summary(sex_fit_healthy)$table
 sex_fit_unhealthy <- survfit(unhealthy_object ~ Sex, data=unhealthy_data)
 summary(sex_fit_unhealthy)$table
+
+healthy_Bulls <- data.frame(b_time=sex_fit_healthy[1]$time, b_surv = sex_fit_healthy[1]$surv, b_upper=sex_fit_healthy[1]$upper, b_lower=sex_fit_healthy[1]$lower)
+healthy_Females <- data.frame(f_time=sex_fit_healthy[2]$time, f_surv = sex_fit_healthy[2]$surv, f_upper=sex_fit_healthy[2]$upper, f_lower=sex_fit_healthy[2]$lower)
+healthy_Males <- data.frame(m_time = sex_fit_healthy[3]$time, m_surv = sex_fit_healthy[3]$surv, m_upper=sex_fit_healthy[3]$upper, m_lower=sex_fit_healthy[3]$lower)
+
+write.csv(healthy_Bulls, paste("kaplan_meier/healthy_Bulls.csv", sep=""), row.names = FALSE)
+write.csv(healthy_Females, paste("kaplan_meier/healthy_Females.csv", sep=""), row.names = FALSE)
+write.csv(healthy_Males, paste("kaplan_meier/healthy_Males.csv", sep=""), row.names = FALSE)
+
+unhealthy_Bulls <- data.frame(b_time=sex_fit_unhealthy[1]$time, b_surv = sex_fit_unhealthy[1]$surv, b_upper=sex_fit_unhealthy[1]$upper, b_lower=sex_fit_unhealthy[1]$lower)
+unhealthy_Females <- data.frame(f_time=sex_fit_unhealthy[2]$time, f_surv = sex_fit_unhealthy[2]$surv, f_upper=sex_fit_unhealthy[2]$upper, f_lower=sex_fit_unhealthy[2]$lower)
+unhealthy_Males <- data.frame(m_time = sex_fit_unhealthy[3]$time, m_surv = sex_fit_unhealthy[3]$surv, m_upper=sex_fit_unhealthy[3]$upper, m_lower=sex_fit_unhealthy[3]$lower)
+
+write.csv(unhealthy_Bulls, paste("kaplan_meier/unhealthy_Bulls.csv", sep=""), row.names = FALSE)
+write.csv(unhealthy_Females, paste("kaplan_meier/unhealthy_Females.csv", sep=""), row.names = FALSE)
+write.csv(unhealthy_Males, paste("kaplan_meier/unhealthy_Males.csv", sep=""), row.names = FALSE)
+
+
 ```
 
 
@@ -245,8 +310,8 @@ km_sex <- ggsurvplot(sex_fit,
          )+
     labs(title="Survival in years vs sex", x="Days", y="Survival_probability") 
 
-ggsave("./data/combined_figs/km_sex.png", plot=km_sex$plot, width = 8, height = 6)
-ggsave("./data/combined_figs/risk_table_km_sex.png", plot=km_sex$table)
+ggsave("./images/new_km/km_sex.png", plot=km_sex$plot, width = 8, height = 6)
+ggsave("./images/new_km/risk_table_km_sex.png", plot=km_sex$table)
 km_sex
 ```
 
@@ -282,45 +347,73 @@ km_sex_helthy_versus_unhealthy <- ggsurvplot(km_sex_helthy_versus_unhealthy,
          )+
     labs(title="Survival in days vs sex", x="Days", y="Survival_probability") 
 
-ggsave("./data/combined_figs/km_sex_helthy_versus_unhealthy.png", plot=km_sex$plot, width = 8, height = 6)
-ggsave("./data/combined_figs/km_sex_helthy_versus_unhealthy.png", plot=km_sex$table)
+ggsave("./images/new_km/km_sex_helthy_versus_unhealthy.png", plot=km_sex$plot, width = 8, height = 6)
+ggsave("./images/new_km/km_sex_helthy_versus_unhealthy.png", plot=km_sex$table)
 km_sex_helthy_versus_unhealthy
 ```
 
 
 ### survival curve for place of death
 
-```{r}
-
-colnames(survival_data)
-survival_data <- rename(survival_data, Place_of_death=Abattoir_._Died_on_Farm) 
-dat_all <- rename(dat_all, Place_of_death=Abattoir_._Died_on_Farm)
-```
 
 ```{r}
 
-place_of_death_fit_days <- survfit(survival_object ~ Place_of_death, data=survival_data)
+place_of_death_fit_days <- survfit(survival_object ~ place_of_death, data=survival_data)
 summary(place_of_death_fit_days)$table
 
-place_of_death_helthy_versus_unhealthy <- survfit(survival_object ~  Health_status + Place_of_death, data=dat_all)
+place_of_death_helthy_versus_unhealthy <- survfit(survival_object ~  Health_status + place_of_death, data=dat_all)
 summary(place_of_death_helthy_versus_unhealthy)$table
 
+abattoir <- data.frame(time=place_of_death_fit_days[1]$time, surv = place_of_death_fit_days[1]$surv, upper=place_of_death_fit_days[1]$upper, lower=place_of_death_fit_days[1]$lower)
+farm <- data.frame(time=place_of_death_fit_days[2]$time, surv = place_of_death_fit_days[2]$surv, upper=place_of_death_fit_days[2]$upper, lower=place_of_death_fit_days[2]$lower)
+
+write.csv(abattoir, paste("kaplan_meier/abattoir.csv", sep=""), row.names = FALSE)
+write.csv(farm, paste("kaplan_meier/farm.csv", sep=""), row.names = FALSE)
+
+
+healthy_abattoir <- data.frame(time=place_of_death_helthy_versus_unhealthy[1]$time, surv = place_of_death_helthy_versus_unhealthy[1]$surv, upper=place_of_death_helthy_versus_unhealthy[1]$upper, lower=place_of_death_helthy_versus_unhealthy[1]$lower)
+healthy_farm <- data.frame(time=place_of_death_helthy_versus_unhealthy[2]$time, surv = place_of_death_helthy_versus_unhealthy[2]$surv, upper=place_of_death_helthy_versus_unhealthy[2]$upper, lower=place_of_death_helthy_versus_unhealthy[2]$lower)
+
+unhealthy_abattoir <- data.frame(time=place_of_death_helthy_versus_unhealthy[3]$time, surv = place_of_death_helthy_versus_unhealthy[3]$surv, upper=place_of_death_helthy_versus_unhealthy[3]$upper, lower=place_of_death_helthy_versus_unhealthy[3]$lower)
+unhealthy_farm <- data.frame(time=place_of_death_helthy_versus_unhealthy[4]$time, surv = place_of_death_helthy_versus_unhealthy[4]$surv, upper=place_of_death_helthy_versus_unhealthy[4]$upper, lower=place_of_death_helthy_versus_unhealthy[4]$lower)
+
+
+write.csv(healthy_abattoir, paste("kaplan_meier/healthy_abattoir.csv", sep=""), row.names = FALSE)
+write.csv(healthy_farm, paste("kaplan_meier/healthy_farm.csv", sep=""), row.names = FALSE)
+
+write.csv(unhealthy_abattoir, paste("kaplan_meier/unhealthy_abattoir.csv", sep=""), row.names = FALSE)
+write.csv(unhealthy_farm, paste("kaplan_meier/unhealthy_farm.csv", sep=""), row.names = FALSE)
+
+
 ```
+
+
+```{r}
+summary(place_of_death_helthy_versus_unhealthy)$table[2, 7]
+summary(place_of_death_helthy_versus_unhealthy)$table
+km_place_of_death_table <- data.frame(place_of_death = c("abattoir", "farm"), 
+                           overall_median = c(summary(place_of_death_fit_days)$table[1, 7], summary(place_of_death_fit_days)$table[2, 7]),
+                           healthy_median = c(summary(place_of_death_helthy_versus_unhealthy)$table[1, 7], summary(place_of_death_helthy_versus_unhealthy)$table[2, 7]),
+                           unhealthy_median = c(summary(place_of_death_helthy_versus_unhealthy)$table[3, 7], summary(place_of_death_helthy_versus_unhealthy)$table[4, 7]))
+
+km_place_of_death_table
+```
+
 
 
 ```{r}
 km_place_of_death_days <- ggsurvplot(place_of_death_fit_days,
           pval = TRUE, conf.int = TRUE,
           risk.table = TRUE, # Add risk table between 318 and 326
-          risk.table.col = "Place_of_death", # Change risk table color by groups
+          risk.table.col = "place_of_death", # Change risk table color by groups
           # linetype = "Place_of_death", # Change line type by groups
           surv.median.line = "hv", # Specify median survival
           ggtheme = theme_bw(), # Change ggplot2 theme
           palette = c("#E7B800", "#2E9FDF"))+
     labs(title="Survival in days vs place of death", x="Days", y="Survival probability") 
 
-ggsave("./data/combined_figs/km_place_of_death_days.png", plot=km_place_of_death_days$plot, width = 8, height = 6)
-ggsave("./data/combined_figs/risk_table_km_place_of_death_days.png", plot=km_place_of_death_days$table)
+ggsave("./images/new_km/km_place_of_death_days.png", plot=km_place_of_death_days$plot, width = 8, height = 6)
+ggsave("./images/new_km/risk_table_km_place_of_death_days.png", plot=km_place_of_death_days$table)
 km_place_of_death_days
 
 ```
@@ -341,17 +434,17 @@ km_place_of_death_days_vs_health<- ggsurvplot(place_of_death_helthy_versus_unhea
 km_place_of_death_days_vs_health 
 
 
-ggsave("./data/combined_figs/km_place_of_death_days_vs_health.png", plot=km_place_of_death_days_vs_health$plot, width = 8, height = 6)
-ggsave("./data/combined_figs/risk_tablekm_place_of_death_days_vs_health.png", plot=km_place_of_death_days_vs_health$table)
+ggsave("./images/new_km/km_place_of_death_days_vs_health.png", plot=km_place_of_death_days_vs_health$plot, width = 8, height = 6)
+ggsave("./images/new_km/risk_tablekm_place_of_death_days_vs_health.png", plot=km_place_of_death_days_vs_health$table)
 
 
 
 ```
 
 ```{r}
-place_of_death_pairwise_unhealthy <- survdiff(survival_object ~ Place_of_death, data=dat_all, subset = Health_status!="healthy")
+place_of_death_pairwise_unhealthy <- survdiff(survival_object ~ place_of_death, data=dat_all, subset = Health_status!="healthy")
 place_of_death_pairwise_unhealthy
-place_of_death_pairwise_healthy <- survdiff(survival_object ~ Place_of_death, data=dat_all, subset = Health_status!="unhealthy")
+place_of_death_pairwise_healthy <- survdiff(survival_object ~ place_of_death, data=dat_all, subset = Health_status!="unhealthy")
 place_of_death_pairwise_healthy
 
 ```
@@ -364,7 +457,7 @@ Type of production
 days
 ```{r}
 
-production_fit_days <- survfit(survival_object ~ Beef_or_Dairy, data=survival_data)
+production_fit_days <- survfit(survival_object ~ prod_type, data=survival_data)
 
 summary(production_fit_days)$table
 
@@ -372,63 +465,73 @@ summary(production_fit_days)$table
 
 
 ```{r}
-prod_fit_months <- survfit(Surv(survival_data$months_alive, survival_data$status)~Beef_or_Dairy, data=survival_data)
-time_prod_months <- data.frame(time = prod_fit_months$time,
-                  n.risk = prod_fit_months$n.risk,
-                  n.event = prod_fit_months$n.event,
-                  n.censor = prod_fit_months$n.censor,
-                  surv = prod_fit_months$surv,
-                  upper = prod_fit_months$upper,
-                  lower = prod_fit_months$lower
-                  )
-time_prod_months
+beef <- data.frame(time=production_fit_days[1]$time, surv = production_fit_days[1]$surv, upper=production_fit_days[1]$upper, lower=production_fit_days[1]$lower)
+dairy <- data.frame(time=production_fit_days[2]$time, surv = production_fit_days[2]$surv, upper=production_fit_days[2]$upper, lower=production_fit_days[2]$lower)
 
+write.csv(beef, paste("kaplan_meier/beef.csv", sep=""), row.names = FALSE)
+write.csv(dairy, paste("kaplan_meier/dairy.csv", sep=""), row.names = FALSE)
 ```
+
 
 
 ```{r}
 km_production_days <- ggsurvplot(production_fit_days,
           pval = TRUE, conf.int = TRUE,
           risk.table = TRUE, # Add risk table
-          risk.table.col = "Beef_or_Dairy", # Change risk table color by groups
-          linetype = "Beef_or_Dairy", # Change line type by groups
+          risk.table.col = "prod_type", # Change risk table color by groups
+          linetype = "prod_type", # Change line type by groups
           surv.median.line = "hv", # Specify median survival
           ggtheme = theme_bw(), # Change ggplot2 theme
           palette = c("#E7B800", "#2E9FDF")) +
         labs(title="Survival in years vs type of production", x="Years", y="Survival probability") 
 
-ggsave("./data/combined_figs/km_production_days.png", plot=km_production_days$plot, width = 8, height = 6)
-ggsave("./data/combined_figs/risk_table_km_production_days.png", plot=km_production_days$table)
+ggsave("./images/new_km/km_production_days.png", plot=km_production_days$plot, width = 8, height = 6)
+ggsave("./images/new_km/risk_table_km_production_days.png", plot=km_production_days$table)
 km_production_days
 ```
 
 production vs health
 
 ```{r}
-prod_helthy_vs_unhealthy <- survfit(survival_object ~  Health_status + Beef_or_Dairy, data=dat_all)
+prod_helthy_vs_unhealthy <- survfit(survival_object ~  Health_status + prod_type, data=dat_all)
 summary(prod_helthy_vs_unhealthy)$table
+
+
+healthy_beef <- data.frame(time=prod_helthy_vs_unhealthy[1]$time, surv = prod_helthy_vs_unhealthy[1]$surv, upper=prod_helthy_vs_unhealthy[1]$upper, lower=prod_helthy_vs_unhealthy[1]$lower)
+healthy_dairy <- data.frame(time=prod_helthy_vs_unhealthy[2]$time, surv = prod_helthy_vs_unhealthy[2]$surv, upper=prod_helthy_vs_unhealthy[2]$upper, lower=prod_helthy_vs_unhealthy[2]$lower)
+
+unhealthy_beef <- data.frame(time=prod_helthy_vs_unhealthy[3]$time, surv = prod_helthy_vs_unhealthy[3]$surv, upper=prod_helthy_vs_unhealthy[3]$upper, lower=prod_helthy_vs_unhealthy[3]$lower)
+unhealthy_dairy <- data.frame(time=prod_helthy_vs_unhealthy[4]$time, surv = prod_helthy_vs_unhealthy[4]$surv, upper=prod_helthy_vs_unhealthy[4]$upper, lower=prod_helthy_vs_unhealthy[4]$lower)
+
+
+write.csv(healthy_beef, paste("kaplan_meier/healthy_beef.csv", sep=""), row.names = FALSE)
+write.csv(healthy_dairy, paste("kaplan_meier/healthy_dairy.csv", sep=""), row.names = FALSE)
+
+write.csv(unhealthy_beef, paste("kaplan_meier/unhealthy_beef.csv", sep=""), row.names = FALSE)
+write.csv(unhealthy_dairy, paste("kaplan_meier/unhealthy_dairy.csv", sep=""), row.names = FALSE)
+
 ```
 
 ```{r}
 km_production_vs_health <- ggsurvplot(prod_helthy_vs_unhealthy,
           pval = TRUE, conf.int = TRUE,
           risk.table = TRUE, # Add risk table
-          risk.table.col = "Beef_or_Dairy", # Change risk table color by groups
+          risk.table.col = "prod_type", # Change risk table color by groups
           linetype = "Health_status", # Change line type by groups
           surv.median.line = "hv", # Specify median survival
           ggtheme = theme_bw(), # Change ggplot2 theme
           ) +
         labs(title="Survival in years vs type of production", x="Years", y="Survival probability") 
 
-ggsave("./data/combined_figs/km_production_vs_health.png", plot=km_production_vs_health$plot, width = 8, height = 6)
-ggsave("./data/combined_figs/risk_table_km_production_vs_health.png", plot=km_production_vs_health$table)
+ggsave("./images/new_km/km_production_vs_health.png", plot=km_production_vs_health$plot, width = 8, height = 6)
+ggsave("./images/new_km/risk_table_km_production_vs_health.png", plot=km_production_vs_health$table)
 km_production_vs_health
 ```
 
 ```{r}
-prod_pairwise_unhealthy <- survdiff(survival_object ~ Beef_or_Dairy, data=dat_all, subset = Health_status!="healthy")
+prod_pairwise_unhealthy <- survdiff(survival_object ~ prod_type, data=dat_all, subset = Health_status!="healthy")
 prod_pairwise_unhealthy
-prod_pairwise_healthy <- survdiff(survival_object ~ Beef_or_Dairy, data=dat_all, subset = Health_status!="unhealthy")
+prod_pairwise_healthy <- survdiff(survival_object ~ prod_type, data=dat_all, subset = Health_status!="unhealthy")
 prod_pairwise_healthy
 
 ```
@@ -436,11 +539,45 @@ prod_pairwise_healthy
 
 Dvo Code
 ```{r}
-
 DVO_fit_days <- survfit(Surv(days_alive, status) ~ Dvo_Code, data=survival_data)
 summary(DVO_fit_days)$table
 DVO_fit_health <- survfit(Surv(days_alive, status) ~ Dvo_Code + Health_status, data=dat_all)
 summary(DVO_fit_health)$table
+```
+
+```{r}
+Armagh <- data.frame(time=DVO_fit_days[1]$time, surv = DVO_fit_days[1]$surv, upper=DVO_fit_days[1]$upper, lower=DVO_fit_days[1]$lower)
+Ballymena <- data.frame(time=DVO_fit_days[2]$time, surv = DVO_fit_days[2]$surv, upper=DVO_fit_days[2]$upper, lower=DVO_fit_days[2]$lower)
+Coleraine <- data.frame(time=DVO_fit_days[3]$time, surv = DVO_fit_days[3]$surv, upper=DVO_fit_days[3]$upper, lower=DVO_fit_days[3]$lower)
+Dungannon <- data.frame(time=DVO_fit_days[4]$time, surv = DVO_fit_days[4]$surv, upper=DVO_fit_days[4]$upper, lower=DVO_fit_days[4]$lower)
+Enniskillen <- data.frame(time=DVO_fit_days[5]$time, surv = DVO_fit_days[5]$surv, upper=DVO_fit_days[5]$upper, lower=DVO_fit_days[5]$lower)
+LondonDerry <- data.frame(time=DVO_fit_days[6]$time, surv = DVO_fit_days[6]$surv, upper=DVO_fit_days[6]$upper, lower=DVO_fit_days[6]$lower)
+Mallusk <- data.frame(time=DVO_fit_days[7]$time, surv = DVO_fit_days[7]$surv, upper=DVO_fit_days[7]$upper, lower=DVO_fit_days[7]$lower)
+Newry <- data.frame(time=DVO_fit_days[8]$time, surv = DVO_fit_days[8]$surv, upper=DVO_fit_days[8]$upper, lower=DVO_fit_days[8]$lower)
+NtArds <- data.frame(time=DVO_fit_days[9]$time, surv = DVO_fit_days[9]$surv, upper=DVO_fit_days[9]$upper, lower=DVO_fit_days[9]$lower)
+Omagh <- data.frame(time=DVO_fit_days[10]$time, surv = DVO_fit_days[10]$surv, upper=DVO_fit_days[10]$upper, lower=DVO_fit_days[10]$lower)
+
+write.csv(Armagh, paste("kaplan_meier/Armagh.csv", sep=""), row.names = FALSE)
+write.csv(Ballymena, paste("kaplan_meier/Ballymena.csv", sep=""), row.names = FALSE)
+write.csv(Coleraine, paste("kaplan_meier/Coleraine.csv", sep=""), row.names = FALSE)
+write.csv(Dungannon, paste("kaplan_meier/Dungannon.csv", sep=""), row.names = FALSE)
+write.csv(Enniskillen, paste("kaplan_meier/Enniskillen.csv", sep=""), row.names = FALSE)
+write.csv(LondonDerry, paste("kaplan_meier/LondonDerry.csv", sep=""), row.names = FALSE)
+write.csv(Mallusk, paste("kaplan_meier/Mallusk.csv", sep=""), row.names = FALSE)
+write.csv(NtArds, paste("kaplan_meier/NtArds.csv", sep=""), row.names = FALSE)
+write.csv(Newry, paste("kaplan_meier/Newry.csv", sep=""), row.names = FALSE)
+write.csv(Omagh, paste("kaplan_meier/Omagh.csv", sep=""), row.names = FALSE)
+```
+
+```{r}
+summary(DVO_fit_health)$table[2, 7]
+summary(DVO_fit_health)$table
+km_place_of_death_table <- data.frame(place_of_death = c("Armagh", "Ballymena", "Coleraine", "Dungannon", "Enniskillen", "LondonDerry", "Mallusk", "Newry", "NtArds",  "Omagh"), 
+                           overall_median = c(summary(DVO_fit_days)$table[1, 7], summary(DVO_fit_days)$table[2, 7], summary(DVO_fit_days)$table[3, 7], summary(DVO_fit_days)$table[4, 7], summary(DVO_fit_days)$table[5, 7], summary(DVO_fit_days)$table[6, 7] ,summary(DVO_fit_days)$table[7, 7], summary(DVO_fit_days)$table[8, 7], summary(DVO_fit_days)$table[9, 7], summary(DVO_fit_days)$table[10, 7]),  
+                           healthy_median = c(summary(DVO_fit_health)$table[1, 7], summary(DVO_fit_health)$table[3, 7], summary(DVO_fit_health)$table[5, 7], summary(DVO_fit_health)$table[7, 7], summary(DVO_fit_health)$table[9, 7], summary(DVO_fit_health)$table[11, 7], summary(DVO_fit_health)$table[13, 7], summary(DVO_fit_health)$table[15, 7], summary(DVO_fit_health)$table[17, 7], summary(DVO_fit_health)$table[19, 7]), 
+                           unhealthy_median = c(summary(DVO_fit_health)$table[2, 7], summary(DVO_fit_health)$table[4, 7], summary(DVO_fit_health)$table[6, 7], summary(DVO_fit_health)$table[8, 7], summary(DVO_fit_health)$table[10, 7], summary(DVO_fit_health)$table[12, 7], summary(DVO_fit_health)$table[14, 7], summary(DVO_fit_health)$table[16, 7], summary(DVO_fit_health)$table[18, 7], summary(DVO_fit_health)$table[20, 7]))
+
+km_place_of_death_table
 ```
 
 
@@ -455,8 +592,8 @@ summary(DVO_fit_health)$table
     ylab = "Survival Probability",
     legend.labs = c(levels(survival_data$Dvo_Code))
   )
-ggsave("./data/combined_figs/km_DVO_days.png", plot=km_DVO_days$plot, width = 8, height = 6)
-ggsave("./data/combined_figs/km_DVO_days.png", plot=km_DVO_days$table)
+ggsave("./images/new_km/km_DVO_days.png", plot=km_DVO_days$plot, width = 8, height = 6)
+ggsave("./images/new_km/km_DVO_days.png", plot=km_DVO_days$table)
 km_DVO_days
 ```
 
@@ -484,11 +621,10 @@ for(i in 1:length(dvo)){
   )
   
   print(plot_days)
-  ggsave(paste("./data/combined_figs/byDvo/",dvo[i],".png", sep = ""), plot=plot_days$plot, width = 8, height = 6)
+  ggsave(paste("./images/new_km/byDvo/",dvo[i],".png", sep = ""), plot=plot_days$plot, width = 8, height = 6)
   
   dvo_renamed <- dvo_all
   }
-
 
 ```
 
@@ -504,6 +640,42 @@ summary(breed_fit_health)$table
 
 
 ```{r}
+summary(breed_fit_health)$table[2, 7]
+summary(breed_fit_health)$table
+km_breed<- data.frame(place_of_death = c("AA", "BB", "CH", "FR", "HER", "HOL", "LIM", "SIM"), 
+                           overall_median = c(summary(breed_fit_days)$table[1, 7], summary(breed_fit_days)$table[2, 7], summary(breed_fit_days)$table[3, 7], summary(breed_fit_days)$table[4, 7], summary(breed_fit_days)$table[5, 7], summary(breed_fit_days)$table[6, 7] ,summary(breed_fit_days)$table[7, 7], summary(breed_fit_days)$table[8, 7]),  
+                           healthy_median = c(summary(breed_fit_health)$table[1, 7], summary(breed_fit_health)$table[3, 7], summary(breed_fit_health)$table[5, 7], summary(breed_fit_health)$table[7, 7], summary(breed_fit_health)$table[9, 7], summary(breed_fit_health)$table[11, 7], summary(breed_fit_health)$table[13, 7], summary(breed_fit_health)$table[15, 7]), 
+                           unhealthy_median = c(summary(breed_fit_health)$table[2, 7], summary(breed_fit_health)$table[4, 7], summary(breed_fit_health)$table[6, 7], summary(breed_fit_health)$table[8, 7], summary(breed_fit_health)$table[10, 7], summary(breed_fit_health)$table[12, 7], summary(breed_fit_health)$table[14, 7], summary(breed_fit_health)$table[16, 7]))
+
+km_breed
+```
+
+```{r}
+AA <- data.frame(time=breed_fit_days[1]$time, surv = breed_fit_days[1]$surv, upper=breed_fit_days[1]$upper, lower=breed_fit_days[1]$lower)
+BB <- data.frame(time=breed_fit_days[2]$time, surv = breed_fit_days[2]$surv, upper=breed_fit_days[2]$upper, lower=breed_fit_days[2]$lower)
+CH <- data.frame(time=breed_fit_days[3]$time, surv = breed_fit_days[3]$surv, upper=breed_fit_days[3]$upper, lower=breed_fit_days[3]$lower)
+FR <- data.frame(time=breed_fit_days[4]$time, surv = breed_fit_days[4]$surv, upper=breed_fit_days[4]$upper, lower=breed_fit_days[4]$lower)
+HER <- data.frame(time=breed_fit_days[5]$time, surv = breed_fit_days[5]$surv, upper=breed_fit_days[5]$upper, lower=breed_fit_days[5]$lower)
+HOL <- data.frame(time=breed_fit_days[6]$time, surv = breed_fit_days[6]$surv, upper=breed_fit_days[6]$upper, lower=breed_fit_days[6]$lower)
+LIM <- data.frame(time=breed_fit_days[7]$time, surv = breed_fit_days[7]$surv, upper=breed_fit_days[7]$upper, lower=breed_fit_days[7]$lower)
+SIM <- data.frame(time=breed_fit_days[8]$time, surv = breed_fit_days[8]$surv, upper=breed_fit_days[8]$upper, lower=breed_fit_days[8]$lower)
+
+
+write.csv(AA, paste("kaplan_meier/AA.csv", sep=""), row.names = FALSE)
+write.csv(BB, paste("kaplan_meier/BB.csv", sep=""), row.names = FALSE)
+write.csv(CH, paste("kaplan_meier/CH.csv", sep=""), row.names = FALSE)
+write.csv(FR, paste("kaplan_meier/FR.csv", sep=""), row.names = FALSE)
+write.csv(HER, paste("kaplan_meier/HER.csv", sep=""), row.names = FALSE)
+write.csv(HOL, paste("kaplan_meier/HOL.csv", sep=""), row.names = FALSE)
+write.csv(LIM, paste("kaplan_meier/LIM.csv", sep=""), row.names = FALSE)
+write.csv(SIM, paste("kaplan_meier/SIM.csv", sep=""), row.names = FALSE)
+
+```
+
+
+
+
+```{r}
  km_breed_days <- ggsurvplot(breed_fit_days,
                            data = survival_data,
                            pval = TRUE,
@@ -514,8 +686,8 @@ summary(breed_fit_health)$table
     ylab = "Survival Probability",
     legend.labs = c(levels(survival_data$Breed))
   )
-ggsave("./data/combined_figs/km_breed_days.png", plot=km_breed_days$plot, width = 8, height = 6)
-ggsave("./data/combined_figs/km_breed_days.png", plot=km_breed_days$table)
+ggsave("./images/new_km/km_breed_days.png", plot=km_breed_days$plot, width = 8, height = 6)
+ggsave("./images/new_km/km_breed_days.png", plot=km_breed_days$table)
 km_breed_days
 ```
 
@@ -543,7 +715,7 @@ for(i in 1:length(breeds)){
   )
   
   print(plot_days)
-  ggsave(paste("./data/combined_figs/byBreedNew/",breeds[i],".png", sep = ""), plot=plot_days$plot, width = 8, height = 6)
+  ggsave(paste("./images/new_km/byBreedNew/",breeds[i],".png", sep = ""), plot=plot_days$plot, width = 8, height = 6)
   
   breeds_renamed <- breed_all
   }
@@ -553,12 +725,116 @@ for(i in 1:length(breeds)){
 
 Abattoir
 ```{r}
-
-Abattoir_fit_days <- survfit(Surv(days_alive, status) ~ Abbatoir, data=survival_data)
+Abattoir_fit_days <- survfit(Surv(days_alive, status) ~ Abattoir, data=survival_data)
 summary(Abattoir_fit_days)$table
-Abattoir_fit_health <- survfit(Surv(days_alive, status) ~ Abbatoir + Health_status, data=dat_all)
+Abattoir_fit_health <- survfit(Surv(days_alive, status) ~ Abattoir + Health_status, data=dat_all)
 summary(Abattoir_fit_health)$table
+
 ```
+
+
+```{r}
+ab_1 <- data.frame(time=Abattoir_fit_days[1]$time, surv = Abattoir_fit_days[1]$surv, upper=Abattoir_fit_days[1]$upper, lower=Abattoir_fit_days[1]$lower)
+ab_10 <- data.frame(time=Abattoir_fit_days[2]$time, surv = Abattoir_fit_days[2]$surv, upper=Abattoir_fit_days[2]$upper, lower=Abattoir_fit_days[2]$lower)
+ab_11 <- data.frame(time=Abattoir_fit_days[3]$time, surv = Abattoir_fit_days[3]$surv, upper=Abattoir_fit_days[3]$upper, lower=Abattoir_fit_days[3]$lower)
+ab_12 <- data.frame(time=Abattoir_fit_days[4]$time, surv = Abattoir_fit_days[4]$surv, upper=Abattoir_fit_days[4]$upper, lower=Abattoir_fit_days[4]$lower)
+ab_13 <- data.frame(time=Abattoir_fit_days[5]$time, surv = Abattoir_fit_days[5]$surv, upper=Abattoir_fit_days[5]$upper, lower=Abattoir_fit_days[5]$lower)
+ab_14 <- data.frame(time=Abattoir_fit_days[6]$time, surv = Abattoir_fit_days[6]$surv, upper=Abattoir_fit_days[6]$upper, lower=Abattoir_fit_days[6]$lower)
+ab_15 <- data.frame(time=Abattoir_fit_days[7]$time, surv = Abattoir_fit_days[7]$surv, upper=Abattoir_fit_days[7]$upper, lower=Abattoir_fit_days[7]$lower)
+ab_16 <- data.frame(time=Abattoir_fit_days[8]$time, surv = Abattoir_fit_days[8]$surv, upper=Abattoir_fit_days[8]$upper, lower=Abattoir_fit_days[8]$lower)
+ab_2 <- data.frame(time=Abattoir_fit_days[9]$time, surv = Abattoir_fit_days[9]$surv, upper=Abattoir_fit_days[9]$upper, lower=Abattoir_fit_days[9]$lower)
+ab_3 <- data.frame(time=Abattoir_fit_days[10]$time, surv = Abattoir_fit_days[10]$surv, upper=Abattoir_fit_days[10]$upper, lower=Abattoir_fit_days[10]$lower)
+ab_4 <- data.frame(time=Abattoir_fit_days[11]$time, surv = Abattoir_fit_days[11]$surv, upper=Abattoir_fit_days[11]$upper, lower=Abattoir_fit_days[11]$lower)
+ab_5 <- data.frame(time=Abattoir_fit_days[12]$time, surv = Abattoir_fit_days[12]$surv, upper=Abattoir_fit_days[12]$upper, lower=Abattoir_fit_days[12]$lower)
+ab_6 <- data.frame(time=Abattoir_fit_days[13]$time, surv = Abattoir_fit_days[13]$surv, upper=Abattoir_fit_days[13]$upper, lower=Abattoir_fit_days[13]$lower)
+ab_7 <- data.frame(time=Abattoir_fit_days[14]$time, surv = Abattoir_fit_days[14]$surv, upper=Abattoir_fit_days[14]$upper, lower=Abattoir_fit_days[14]$lower)
+ab_8 <- data.frame(time=Abattoir_fit_days[15]$time, surv = Abattoir_fit_days[15]$surv, upper=Abattoir_fit_days[15]$upper, lower=Abattoir_fit_days[15]$lower)
+ab_9 <- data.frame(time=Abattoir_fit_days[16]$time, surv = Abattoir_fit_days[16]$surv, upper=Abattoir_fit_days[16]$upper, lower=Abattoir_fit_days[16]$lower)
+
+write.csv(ab_1, paste("kaplan_meier/ab_1.csv", sep=""), row.names = FALSE)
+write.csv(ab_10, paste("kaplan_meier/ab_10.csv", sep=""), row.names = FALSE)
+write.csv(ab_11, paste("kaplan_meier/ab_11.csv", sep=""), row.names = FALSE)
+write.csv(ab_12, paste("kaplan_meier/ab_12.csv", sep=""), row.names = FALSE)
+write.csv(ab_13, paste("kaplan_meier/ab_13.csv", sep=""), row.names = FALSE)
+write.csv(ab_14, paste("kaplan_meier/ab_14.csv", sep=""), row.names = FALSE)
+write.csv(ab_15, paste("kaplan_meier/ab_15.csv", sep=""), row.names = FALSE)
+write.csv(ab_16, paste("kaplan_meier/ab_16.csv", sep=""), row.names = FALSE)
+write.csv(ab_2, paste("kaplan_meier/ab_2.csv", sep=""), row.names = FALSE)
+write.csv(ab_3, paste("kaplan_meier/ab_3.csv", sep=""), row.names = FALSE)
+write.csv(ab_4, paste("kaplan_meier/ab_4.csv", sep=""), row.names = FALSE)
+write.csv(ab_5, paste("kaplan_meier/ab_5.csv", sep=""), row.names = FALSE)
+write.csv(ab_6, paste("kaplan_meier/ab_6.csv", sep=""), row.names = FALSE)
+write.csv(ab_7, paste("kaplan_meier/ab_7.csv", sep=""), row.names = FALSE)
+write.csv(ab_8, paste("kaplan_meier/ab_8.csv", sep=""), row.names = FALSE)
+write.csv(ab_9, paste("kaplan_meier/ab_9.csv", sep=""), row.names = FALSE)
+```
+
+
+```{r}
+ab_1_healthy <- data.frame(time=Abattoir_fit_health[1]$time, surv = Abattoir_fit_health[1]$surv, upper=Abattoir_fit_health[1]$upper, lower=Abattoir_fit_health[1]$lower)
+ab_1_unhealthy <- data.frame(time=Abattoir_fit_health[2]$time, surv = Abattoir_fit_health[2]$surv, upper=Abattoir_fit_health[2]$upper, lower=Abattoir_fit_health[2]$lower)
+ab_10_healthy <- data.frame(time=Abattoir_fit_health[3]$time, surv = Abattoir_fit_health[3]$surv, upper=Abattoir_fit_health[3]$upper, lower=Abattoir_fit_health[3]$lower)
+ab_10_unhealthy <- data.frame(time=Abattoir_fit_health[4]$time, surv = Abattoir_fit_health[4]$surv, upper=Abattoir_fit_health[4]$upper, lower=Abattoir_fit_health[4]$lower)
+ab_11_healthy <- data.frame(time=Abattoir_fit_health[5]$time, surv = Abattoir_fit_health[5]$surv, upper=Abattoir_fit_health[5]$upper, lower=Abattoir_fit_health[5]$lower)
+ab_11_unhealthy <- data.frame(time=Abattoir_fit_health[6]$time, surv = Abattoir_fit_health[6]$surv, upper=Abattoir_fit_health[6]$upper, lower=Abattoir_fit_health[6]$lower)
+ab_12_healthy <- data.frame(time=Abattoir_fit_health[7]$time, surv = Abattoir_fit_health[7]$surv, upper=Abattoir_fit_health[7]$upper, lower=Abattoir_fit_health[7]$lower)
+ab_12_unhealthy <- data.frame(time=Abattoir_fit_health[8]$time, surv = Abattoir_fit_health[8]$surv, upper=Abattoir_fit_health[8]$upper, lower=Abattoir_fit_health[8]$lower)
+ab_13_healthy <- data.frame(time=Abattoir_fit_health[9]$time, surv = Abattoir_fit_health[9]$surv, upper=Abattoir_fit_health[9]$upper, lower=Abattoir_fit_health[9]$lower)
+ab_13_unhealthy <- data.frame(time=Abattoir_fit_health[10]$time, surv = Abattoir_fit_health[10]$surv, upper=Abattoir_fit_health[10]$upper, lower=Abattoir_fit_health[10]$lower)
+ab_14_healthy <- data.frame(time=Abattoir_fit_health[11]$time, surv = Abattoir_fit_health[11]$surv, upper=Abattoir_fit_health[11]$upper, lower=Abattoir_fit_health[11]$lower)
+ab_14_unhealthy <- data.frame(time=Abattoir_fit_health[12]$time, surv = Abattoir_fit_health[12]$surv, upper=Abattoir_fit_health[12]$upper, lower=Abattoir_fit_health[12]$lower)
+ab_15_healthy <- data.frame(time=Abattoir_fit_health[13]$time, surv = Abattoir_fit_health[13]$surv, upper=Abattoir_fit_health[13]$upper, lower=Abattoir_fit_health[13]$lower)
+ab_15_unhealthy <- data.frame(time=Abattoir_fit_health[14]$time, surv = Abattoir_fit_health[14]$surv, upper=Abattoir_fit_health[14]$upper, lower=Abattoir_fit_health[14]$lower)
+ab_16_healthy <- data.frame(time=Abattoir_fit_health[15]$time, surv = Abattoir_fit_health[15]$surv, upper=Abattoir_fit_health[15]$upper, lower=Abattoir_fit_health[15]$lower)
+ab_16_unhealthy <- data.frame(time=Abattoir_fit_health[16]$time, surv = Abattoir_fit_health[16]$surv, upper=Abattoir_fit_health[16]$upper, lower=Abattoir_fit_health[16]$lower)
+ab_2_healthy <- data.frame(time=Abattoir_fit_health[17]$time, surv = Abattoir_fit_health[17]$surv, upper=Abattoir_fit_health[17]$upper, lower=Abattoir_fit_health[17]$lower)
+ab_2_unhealthy <- data.frame(time=Abattoir_fit_health[18]$time, surv = Abattoir_fit_health[18]$surv, upper=Abattoir_fit_health[18]$upper, lower=Abattoir_fit_health[18]$lower)
+ab_3_healthy <- data.frame(time=Abattoir_fit_health[19]$time, surv = Abattoir_fit_health[19]$surv, upper=Abattoir_fit_health[19]$upper, lower=Abattoir_fit_health[19]$lower)
+ab_3_unhealthy <- data.frame(time=Abattoir_fit_health[20]$time, surv = Abattoir_fit_health[20]$surv, upper=Abattoir_fit_health[20]$upper, lower=Abattoir_fit_health[20]$lower)
+ab_4_healthy <- data.frame(time=Abattoir_fit_health[21]$time, surv = Abattoir_fit_health[21]$surv, upper=Abattoir_fit_health[21]$upper, lower=Abattoir_fit_health[21]$lower)
+ab_4_unhealthy <- data.frame(time=Abattoir_fit_health[22]$time, surv = Abattoir_fit_health[22]$surv, upper=Abattoir_fit_health[22]$upper, lower=Abattoir_fit_health[22]$lower)
+ab_5_unhealthy <- data.frame(time=Abattoir_fit_health[23]$time, surv = Abattoir_fit_health[23]$surv, upper=Abattoir_fit_health[23]$upper, lower=Abattoir_fit_health[23]$lower)
+ab_6_healthy <- data.frame(time=Abattoir_fit_health[24]$time, surv = Abattoir_fit_health[24]$surv, upper=Abattoir_fit_health[24]$upper, lower=Abattoir_fit_health[24]$lower)
+ab_6_unhealthy <- data.frame(time=Abattoir_fit_health[25]$time, surv = Abattoir_fit_health[25]$surv, upper=Abattoir_fit_health[25]$upper, lower=Abattoir_fit_health[25]$lower)
+ab_7_healthy <- data.frame(time=Abattoir_fit_health[26]$time, surv = Abattoir_fit_health[26]$surv, upper=Abattoir_fit_health[26]$upper, lower=Abattoir_fit_health[26]$lower)
+ab_7_unhealthy <- data.frame(time=Abattoir_fit_health[27]$time, surv = Abattoir_fit_health[27]$surv, upper=Abattoir_fit_health[27]$upper, lower=Abattoir_fit_health[27]$lower)
+ab_8_healthy <- data.frame(time=Abattoir_fit_health[28]$time, surv = Abattoir_fit_health[28]$surv, upper=Abattoir_fit_health[28]$upper, lower=Abattoir_fit_health[28]$lower)
+ab_8_unhealthy <- data.frame(time=Abattoir_fit_health[29]$time, surv = Abattoir_fit_health[29]$surv, upper=Abattoir_fit_health[29]$upper, lower=Abattoir_fit_health[29]$lower)
+ab_9_healthy <- data.frame(time=Abattoir_fit_health[30]$time, surv = Abattoir_fit_health[30]$surv, upper=Abattoir_fit_health[30]$upper, lower=Abattoir_fit_health[30]$lower)
+ab_9_unhealthy <- data.frame(time=Abattoir_fit_health[31]$time, surv = Abattoir_fit_health[31]$surv, upper=Abattoir_fit_health[31]$upper, lower=Abattoir_fit_health[31]$lower)
+write.csv(ab_1_healthy, paste("kaplan_meier/ab_1_healthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_1_unhealthy, paste("kaplan_meier/ab_1_unhealthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_10_healthy, paste("kaplan_meier/ab_10_healthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_10_unhealthy, paste("kaplan_meier/ab_10_unhealthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_11_healthy, paste("kaplan_meier/ab_11_healthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_11_unhealthy, paste("kaplan_meier/ab_11_unhealthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_12_healthy, paste("kaplan_meier/ab_12_healthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_12_unhealthy, paste("kaplan_meier/ab_12_unhealthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_13_healthy, paste("kaplan_meier/ab_13_healthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_13_unhealthy, paste("kaplan_meier/ab_13_unhealthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_14_healthy, paste("kaplan_meier/ab_14_healthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_14_unhealthy, paste("kaplan_meier/ab_14_unhealthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_15_healthy, paste("kaplan_meier/ab_15_healthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_15_unhealthy, paste("kaplan_meier/ab_15_unhealthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_16_healthy, paste("kaplan_meier/ab_16_healthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_16_unhealthy, paste("kaplan_meier/ab_16_unhealthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_2_healthy, paste("kaplan_meier/ab_2_healthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_2_unhealthy, paste("kaplan_meier/ab_2_unhealthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_3_healthy, paste("kaplan_meier/ab_3_healthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_3_unhealthy, paste("kaplan_meier/ab_3_unhealthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_4_healthy, paste("kaplan_meier/ab_4_healthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_4_unhealthy, paste("kaplan_meier/ab_4_unhealthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_5_unhealthy, paste("kaplan_meier/ab_5_unhealthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_6_healthy, paste("kaplan_meier/ab_6_healthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_6_unhealthy, paste("kaplan_meier/ab_6_unhealthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_7_healthy, paste("kaplan_meier/ab_7_healthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_7_unhealthy, paste("kaplan_meier/ab_7_unhealthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_8_healthy, paste("kaplan_meier/ab_8_healthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_8_unhealthy, paste("kaplan_meier/ab_8_unhealthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_9_healthy, paste("kaplan_meier/ab_9_healthy.csv", sep=""), row.names = FALSE)
+write.csv(ab_9_unhealthy, paste("kaplan_meier/ab_9_unhealthy.csv", sep=""), row.names = FALSE)
+```
+
 
 
 ```{r}
