@@ -27,7 +27,7 @@ library(ggpubr)
 
 Load dataset 
 ```{r}
-combined_data <- read.csv("./data/final_merged_wide.csv")
+combined_data <- read.csv("./data/final_merged_wide.csv") # this dataset contains na at the herd size correct dataset on the one drive
 head(combined_data)
 combined_size_weather <- read.csv("./data/final_merged_wide.csv")
 combined_size_weather[combined_size_weather$Herd_Id=="fef07ff7ccf1f32b2bb31f90a8eee5c5d9ceb639", ]
@@ -280,6 +280,9 @@ combined_data_without_outliers <- combined_data[!outliers3, ]
 combined_data_without_outliers
 ```
 
+```{r}
+sum(is.na(combined_data_without_outliers$AvgOftotal_animals))
+```
 
 ```{r}
 sapply(combined_data, nlevels)
@@ -359,7 +362,7 @@ summary(be[, age])
 
 ```
 
-
+The vertical lines are not correct (red is median)
 ```{r}
 
 # Days alive without outliers
@@ -367,6 +370,7 @@ days_alive_histogram_no_outliers <- ggplot(combined_data_without_outliers, aes(x
   geom_histogram(binwidth=60, fill="steelblue") +
   geom_density(alpha=0.2, fill="#FF6666")+
   geom_vline(aes(xintercept= mean(days_alive), color="red")) +
+  geom_vline(aes(xintercept=median(days_alive), color = "green"))+
   labs(title="Histogram of age in days", x="days", y="Animals")+
   theme_minimal()
 

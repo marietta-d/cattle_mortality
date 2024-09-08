@@ -1,0 +1,122 @@
+---
+title: "forest_plot"
+author: "Marietta_Dalamanga"
+date: "2024-09-06"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(survival)
+library(survminer)
+library(ggplot2)
+library(ggpubr)
+library(caret)
+```
+
+
+```{r}
+data <- read.csv("data/final_dataset.csv")
+head(data)
+```
+
+```{r}
+colnames(data)
+data[,c("Herd_Id", "Dvo_Code","Abattoir", "prod_type", "Breed", "Sex", "place_of_death", "num_cond")] = 
+  lapply(data[,c("Herd_Id", "Dvo_Code","Abattoir", "prod_type", "Breed", "Sex", "place_of_death", "num_cond")],
+                                function(x) as.factor(x))
+```
+
+
+```{r}
+set.seed(123)
+less_data_indeces <- createDataPartition(data$days_alive, p=0.05, list=FALSE)
+less_data <- data[less_data_indeces, ]
+```
+
+
+```{r}
+
+model <- coxph( Surv(days_alive, status) ~ Sex + Dvo_Code + Abattoir + frailty(Herd_Id),
+                data = less_data )
+model
+```
+
+
+```{r}
+saveRDS(model, "best_cox_frailty_hold_assumption")
+```
+
+
+```{r}
+model$concordance
+```
+
+
+```{r}
+best_model_not_assumption <- coxph( Surv(days_alive, status) ~ Sex + Breed + Abattoir + place_of_death + herd_size + frailty(Herd_Id),
+                data = less_data )
+
+best_model_not_assumption
+```
+
+```{r}
+saveRDS(best_model_not_assumption, "best_cox_frailty_not_assumption")
+```
+
+```{r}
+best_model_not_assumption$concordance
+
+```
+
+create forest plot for best cox with frailty
+```{r}
+best_cox_ass_forest_plot <- ggforest(model, 
+         data=less_data, 
+         main = "Hazard ratio",
+         cpositions = c(0.02, 0.22, 0.4),
+         fontsize = 0.5,
+         refLabel = "reference",
+         noDigits = 1
+)
+
+best_cox_ass_forest_plot
+
+```
+
+```{r}
+best_model_not_assumption <- readRDS("best_cox_frailty_not_assumption")
+best_cox_forest_plot <- ggforest(best_model_not_assumption, 
+         data=less_data, 
+         main = "Hazard ratio",
+         cpositions = c(0.02, 0.22, 0.4),
+         fontsize = 0.5,
+         refLabel = "reference",
+         noDigits = 1
+)
+
+best_cox_forest_plot
+
+```
+
+
+
+```{r}
+meta_cox_frailty <- readRDS("models/cox_frailty/meta_Herd_Id.rds")
+meta_cox_frailty[order(meta_cox_frailty$llik_cache, decreasing = TRUE),]
+```
+
+
+```{r}
+stats_cox_frailty <- readRDS("models/cox_frailty/stats_Herd_Id.rds")
+stats_cox_frailty
+```
+
+```{r}
+cox_models_frailty <- readRDS("models/cox_frailty/models_Herd_Id.rds")
+cox_models_frailty[42]
+best_model_cox_frailty <-
+
+
