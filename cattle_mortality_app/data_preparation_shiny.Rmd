@@ -1,0 +1,118 @@
+---
+title: "data transformation"
+output: html_notebook
+---
+```{r}
+library(reactable)
+library(dplyr)
+library(tidyverse)
+library(tidyr)
+library(survival)
+library(survminer)
+library(data.table)
+library(ggplot2)
+library(ggpubr)
+library(caret)
+```
+
+
+```{r}
+
+cattle <- read.csv("C:/Users/i-mar//Desktop/MSc Data analytcs/placement/thesis_code/data/cattle_data.csv")
+
+```
+
+
+```{r}
+cattle[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy")] = 
+  lapply(cattle[,c("Herd_Id", "Abbatoir", "Dvo_Code", "Breed", "Sex", "Abattoir_._Died_on_Farm", "Beef_or_Dairy")],
+                                function(x) as.factor(x))
+str(cattle)
+```
+
+```{r}
+cattle$Dod <- as.Date(cattle$Dod, format="%Y-%m-%d")
+cattle$Dob <- as.Date(cattle$Dob, format="%Y-%m-%d")
+```
+
+
+```{r}
+cattle$Year <- as.integer(format(cattle$Dod, "%Y"))
+cattle$Month <- as.integer(format(cattle$Dod, "%m"))
+```
+
+
+
+
+
+
+```{r}
+table <- cattle %>%
+  group_by(Year) %>%
+  summarise(days = mean(days_alive))
+table
+
+```
+
+# randomly select a fraction of the dataset and create a new data frame to use it in shiny app
+```{r}
+set.seed(123)
+trainIndex <- createDataPartition(cattle$days_alive, p = .01, 
+                                  list = FALSE, 
+                                  times = 1)
+head(trainIndex)
+```
+```{r}
+cattle_data <- cattle[trainIndex,]
+head(cattle_data)
+```
+```{r}
+summary(cattle_data)
+```
+```{r}
+cattle_data <- cattle_data%>%
+  mutate(status = 1)
+cattle_data
+
+```
+```{r}
+saveRDS(cattle_data, file="cattle_mortality_app/shiny_data.Rda")
+```
+
+Load necessary libs for surv
+```{r}
+library(survival)
+library(survminer)
+```
+
+Now do what we want to do in shiny:
+```{r}
+inputSelectionDummy <- "Sex"
+formula_str <- paste("Surv(days_alive, status) ~", inputSelectionDummy)
+survival_formula <- as.formula(formula_str)
+fit <- do.call(survfit, args = list(formula = survival_formula, data = cattle_data))
+print(ggsurvplot(fit, data = cattle_data))
+```
+
+
+
+
+```{r}
+new_cattle_data <- cattle_data[, c(4:6, 9:14)]
+new_cattle_data <- new_cattle_data %>%
+  rename(Production_type = Beef_or_Dairy, Place_of_death = Abattoir_._Died_on_Farm)
+new_cattle_data
+```
+
+
+```{r}
+library(reactable)
+
+reactable(new_cattle_data,filterable= TRUE,
+                groupBy = "Sex",
+                columns = list(days_alive = colDef(aggregate = "mean")))
+```
+
+
+
+
