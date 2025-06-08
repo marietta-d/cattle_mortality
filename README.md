@@ -36,20 +36,33 @@ You may download the final report from [here]().
 
 ## Key findings
 
+Survival functions were estimated for animals of different sexes
 
-## Contents
+<img width="545" alt="1" src="https://github.com/user-attachments/assets/d275fdea-7b3a-4ef0-a4b7-d9152d76deff" />
 
-- `collinearity.Rmd`:  
-- `cox_modelling.Rmd`       
-- `eda_combined.Rmd`               
-- `fit_distributions.Rmd`  
-- `mean_age_different_variables.Rmd`
-- `combined_km.Rmd`   
-- `data_preprocessing.Rmd`  
-- `fit_distributions_on_data.Rmd`
-- `log_rank_tests.Rmd`
-- `prepare_data_for_modelling.Rmd`
+different places of death
 
-## How to use
+<img width="546" alt="2" src="https://github.com/user-attachments/assets/7faded63-497b-49bc-829b-80a3f267ef66" />
 
-TODO
+different breeds
+
+<img width="551" alt="3" src="https://github.com/user-attachments/assets/6dcebbb3-7fc4-4c00-ba20-8c7df46218e9" />
+
+different health conditions 
+
+<img width="540" alt="4" src="https://github.com/user-attachments/assets/3f222c51-d84a-41d7-8c1c-ffa148c20f2a" />
+
+and many more parameters.
+
+An exhaustive analysis was conducted were several Cox models were produced, with and without frailty terms. 
+Indicatively, the findings are shown in the table below
+
+<img width="741" alt="5" src="https://github.com/user-attachments/assets/4b2bb5f7-24af-4a20-9540-11e4562a3c63" />
+
+a lot more results, analyses, and conclusions are available in the [MSc report]().
+
+This GitHub repo contains the R and Python scripts used to perform the analyses. Due to confidentiality reasons, the raw data have not been included in this repo.
+
+
+
+
