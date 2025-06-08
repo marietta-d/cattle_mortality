@@ -32,7 +32,7 @@ forest (RMSE 153.4 days, R<sup>2</sup>=0.65).
 The sex and certain abattoirs proved
 to be the main risk factors for cattle survival.
 
-You may download the final report from [here]().
+You may download the final report from [here](https://github.com/marietta-d/cattle_mortality/releases/download/v1.0/M.Dalamanga.Cattle.mortality.MSc.thesis.pdf).
 
 ## Key findings
 
@@ -59,7 +59,7 @@ Indicatively, the findings are shown in the table below
 
 <img width="741" alt="5" src="https://github.com/user-attachments/assets/4b2bb5f7-24af-4a20-9540-11e4562a3c63" />
 
-a lot more results, analyses, and conclusions are available in the [MSc report]().
+a lot more results, analyses, and conclusions are available in the [MSc report](https://github.com/marietta-d/cattle_mortality/releases/download/v1.0/M.Dalamanga.Cattle.mortality.MSc.thesis.pdf).
 
 This GitHub repo contains the R and Python scripts used to perform the analyses. Due to confidentiality reasons, the raw data have not been included in this repo.
 
