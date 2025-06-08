@@ -34,6 +34,14 @@ to be the main risk factors for cattle survival.
 
 You may download the final report from [here](https://github.com/marietta-d/cattle_mortality/releases/download/v1.0/M.Dalamanga.Cattle.mortality.MSc.thesis.pdf).
 
+## Shiny App for survival analysis
+
+A **Shiny** app has been developed to facilitate the visulation of survival analysis.
+The app is in `cattle_mortality_app/`. Here is a screenshot:
+
+<img width="545" alt="1" src="https://github.com/user-attachments/assets/c0995c08-7f98-4922-926e-bf255c6a29ab" />
+
+
 ## Key findings
 
 Survival functions were estimated for animals of different sexes
